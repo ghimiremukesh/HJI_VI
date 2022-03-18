@@ -6,33 +6,35 @@ import scipy.io
 from util import Simulate
 from problem import BRT
 
-N = 20
+N = 10
 rho = 100
 prob = BRT(N=N, T=1.0, rho=rho)
 opti = ca.Opti()
 
 # control variable
-u_static = [3] * N
-d = opti.variable(1, N)
+u_static = [3] * (N - 1)
+d = opti.variable(1, N - 1)
 
 # state
-states = opti.variable(3, N)
-x1 = states[0, :]
-x2 = states[1, :]
-x3 = states[2, :]
+x = opti.variable(3, N - 1)
+x1 = x[0, :]
+x2 = x[1, :]
+x3 = x[2, :]
 
 # parameters
 opt_x0 = opti.parameter(3)
 
 # init_condition
-opti.subject_to(states[:, 0] == opt_x0)
 con = [1] * (N - 1)
+x_next = opt_x0 + prob.f(opt_x0, u_static[0], d[:, 0]) * prob.dt
+con[0] = x[:, 0] == x_next
+opti.subject_to(con[0])
 # dynamic constraint
-for i in range(N - 1):
+for i in range(1, N - 1):
     #     u[:, i] = u_star(lam[:, i + 1], states[:, i], dt)
     # d[:, i] = d_star(lam[:, i])
-    x_next = states[:, i] + prob.f(states[:, i], u_static[i], d[:, i]) * prob.dt
-    con[i] = states[:, i + 1] == x_next
+    x_next = x[:, i - 1] + prob.f(x[:, i - 1], u_static[i], d[:, i]) * prob.dt
+    con[i] = x[:, i] == x_next
     opti.subject_to(con[i])
 
 # INITIAL GUESSES
@@ -48,7 +50,7 @@ for i in range(N - 1):
 # opti.set_initial(d, [3] * N)
 
 # adv. obj to minimize the min of l(x)
-opti.minimize(prob.F(states))
+opti.minimize(prob.F(x))
 
 # boundary and control conditions
 # opti.subject_to(opti.bounded(-1.0, x1, 1.0))
@@ -68,7 +70,7 @@ opts_setting = {'ipopt.hessian_approximation': "limited-memory", 'ipopt.max_iter
 opti.solver('ipopt', opts_setting)
 sol = opti.solve()
 
-res_x = sol.value(states)
+res_x = sol.value(x)
 res_d = sol.value(d)
 res_obj = np.min(prob.l_batch(res_x))
 
@@ -78,11 +80,16 @@ res_obj = np.min(prob.l_batch(res_x))
 
 # check Lagrangian
 # NOTE: Casadi flips the sign of lagrangian multipliers!
-dLdx = [prob.dFdx(res_x, i) - sol.value(opti.dual(con[i - 1])) +
-        np.matmul(prob.dfdx(res_x[:, i], res_d[i]), sol.value(opti.dual(con[i])))
+dLdx = [prob.dFdx(res_x, i - 1) + sol.value(opti.dual(con[i - 1])) -
+        np.matmul(prob.dfdx(res_x[:, i - 1], res_d[i]), sol.value(opti.dual(con[i])))
         for i in range(1, N - 1)]
 
 print(dLdx)
+
+singular = [sol.value(opti.dual(con[i]))[2]
+        for i in range(1, N - 1)]
+
+print(singular)
 
 ini_state = np.array([0.5, -0.5, 1.586])
 d_static = [3] * N

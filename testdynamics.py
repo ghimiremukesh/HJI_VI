@@ -17,7 +17,7 @@ opt_x0 = opti.parameter(2)
 con = [1] * (N - 1)
 # dynamic constraint
 x_next = opt_x0 + prob.f(opt_x0, u[0]) * prob.dt
-con[0] = x[:, 1] == x_next
+con[0] = x[:, 0] == x_next
 opti.subject_to(con[0])
 for i in range(1, N - 1):
     #     u[:, i] = u_star(lam[:, i + 1], states[:, i], dt)
@@ -43,7 +43,7 @@ res_u = sol.value(u)
 res_obj = prob.F(res_x)
 
 # check Lagrangian
-dLdx = [prob.dFdx(res_x, i - 1) - sol.value(opti.dual(con[i - 1])) +
+dLdx = [prob.dFdx(res_x, i - 1) + sol.value(opti.dual(con[i - 1])) -
         np.matmul(prob.dfdx(), sol.value(opti.dual(con[i])))
         for i in range(1, N - 1)]
 print(dLdx)

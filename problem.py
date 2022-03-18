@@ -74,10 +74,10 @@ class Test:
 # for debug only
 class TestDynamics:
     def __init__(self, N):
-        self.A = np.array([[1, -0.5], [0, 1]])
-        self.B = np.array([[0.], [-1.]])
+        self.A = np.array([[0, 1], [0, 0]])
+        self.B = np.array([[0.], [1.]])
         self.N = N
-        self.dt = 0.1
+        self.dt = 10.
 
     def F(self, x_):
         return 0.5 * ca.sum2(x_[0, :]**2 + x_[1, :]**2)
