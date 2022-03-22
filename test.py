@@ -5,14 +5,17 @@ import time
 import math
 import scipy.io
 from util import Simulate
-from problem import Test
+from problem import TestFEA
 
-prob = Test()
+prob = TestFEA()
 opti = ca.Opti()
-x = opti.variable(2)
+x = opti.variable(4)
 
-con = x[0] + x[1] == 1
+# prob.F(np.ones(4))
+
+con = prob.h(x) == 0
 opti.subject_to(con)
+opti.subject_to(opti.bounded(1e-3, x, 1000))
 opti.minimize(prob.F(x))
 
 opts_setting = {'ipopt.hessian_approximation': "limited-memory", 'ipopt.max_iter': 20000, 'ipopt.print_level': 5,
@@ -26,6 +29,6 @@ res_x = sol.value(x)
 res_obj = prob.F(res_x)
 
 # check Lagrangian
-dLdx = prob.dFdx(res_x) - sol.value(opti.dual(con)) * np.array([1, 1])
-print(dLdx)
+# dLdx = prob.dFdx(res_x) - sol.value(opti.dual(con)) * np.array([1, 1])
+# print(dLdx)
 

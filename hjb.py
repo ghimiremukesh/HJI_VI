@@ -3,16 +3,20 @@ import numpy as np
 import time
 import math
 import scipy.io
-from util import Simulate
+from util import Simulate, Utility
 from problem import BRT
 
-N = 10
+N = 20
 rho = 100
 prob = BRT(N=N, T=1.0, rho=rho)
 opti = ca.Opti()
 
 # control variable
-u_static = [3] * (N - 1)
+u_static = [-3] * (N - 1)
+# u_static = [ 3.00000003, 3.00000003,  3.00000003,  3.00000003,  3.00000003,  3.00000003,
+#   3.00000003,  3.00000002,  2.9999999,   2.99999538,  2.99987234, -2.99797499,
+#  -2.98950176, -2.2151227,  -1.53086581, -0.9767703,  -0.54457681, -0.22446347,
+#   0.04337147]
 d = opti.variable(1, N - 1)
 
 # state
@@ -24,7 +28,6 @@ x3 = x[2, :]
 # parameters
 opt_x0 = opti.parameter(3)
 
-# init_condition
 con = [1] * (N - 1)
 x_next = opt_x0 + prob.f(opt_x0, u_static[0], d[:, 0]) * prob.dt
 con[0] = x[:, 0] == x_next
@@ -56,15 +59,15 @@ opti.minimize(prob.F(x))
 # opti.subject_to(opti.bounded(-1.0, x1, 1.0))
 # opti.subject_to(opti.bounded(-1.0, x2, 1.0))
 # opti.subject_to(opti.bounded(-math.pi, x3, math.pi))
-#
-# opti.subject_to(opti.bounded(-3, d, 3))
+
+opti.subject_to(opti.bounded(-3, d, 3))
 
 ini_state = np.array([[0.5], [-0.5], [1.586]])
 opti.set_value(opt_x0, ini_state)
 
 opts_setting = {'ipopt.hessian_approximation': "limited-memory", 'ipopt.max_iter': 20000, 'ipopt.print_level': 5,
                 'print_time': 0,
-                'ipopt.acceptable_tol': 1e-8, 'ipopt.acceptable_obj_change_tol': 1e-8,
+                'ipopt.acceptable_tol': 1e-4, 'ipopt.acceptable_obj_change_tol': 1e-4,
                 'ipopt.inf_pr_output': "original"}
 
 opti.solver('ipopt', opts_setting)
@@ -91,10 +94,14 @@ singular = [sol.value(opti.dual(con[i]))[2]
 
 print(singular)
 
-ini_state = np.array([0.5, -0.5, 1.586])
-d_static = [3] * N
-u_static = [3] * N
-s = Simulate(N, u_static, d_static, ini_state)
-states = s.rollout()
-loss = s.loss(states)
-print(np.min(loss))
+util = Utility()
+util.brt_plot(u_static, res_d, ini_state.flatten(), prob)
+
+# ini_state = np.array([0.5, -0.5, 1.586])
+# d_static = [3] * N
+# u_static = [3] * N
+# s = Simulate(N, u_static, d_static, ini_state)
+# states = s.rollout()
+# loss = s.loss(states)
+# util.brt_plot(u_static, d_static, ini_state.flatten(), prob)
+# print(np.min(loss))

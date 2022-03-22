@@ -53,7 +53,10 @@ class BRT:  # from *** paper ***
 
     def dFdx(self, x_, id):  # x_: state trj, i: time step
             e = ca.exp(-self.rho * self.l_batch(x_))
-            softmax = e[id]/ca.sum1(e)
+            if isinstance(x_, np.ndarray):  # this is for post analysis
+                softmax = e[id]/ca.sum1(e)
+            else:
+                softmax = e[id]/ca.sum2(e)  # for casadi formulation
             return softmax * self.dldx(x_[:, id])
 
     def u_star(self, lam, x_, dt):
@@ -70,6 +73,57 @@ class Test:
     def dFdx(self, x_):
         return np.array([2*x_[0], 2*x_[1]])
 
+
+# another test problem for casadi
+class TestFEA:
+    def F(self, x):  # to minimize strain energy
+        K = self.K(x)  # stiffness matrix
+        f = np.array([-20000, 0, 25000])  # external force
+        K_ = K[np.ix_([2, 4, 5], [2, 4, 5])]
+        u = ca.mtimes(ca.inv(K_), f)  # deflection
+        e = ca.mtimes(ca.mtimes(ca.transpose(u), K_), u)  # strain energy
+        return e
+
+    def K(self, x):  # global stiffness matrix
+        l = [40, 30, 50, 40]
+        theta = [0, np.pi/2, 0.643501109, 0]
+        k = [self.k(l[i], x[i], theta[i]) for i in range(4)]  # element-wise stiffness matrix
+
+        # for a specific case:
+        # K = ca.MX.zeros((3, 3))
+        # K[0, 0] += k[0][2, 2]  # from element 1
+        # K += k[1][np.ix_([0, 2, 3], [0, 2, 3])]  # from element 2
+        # K[np.ix_([1, 2], [1, 2])] += k[2][np.ix_([2, 3], [2, 3])]  # from element 3
+        # K[np.ix_([1, 2], [1, 2])] += k[3][np.ix_([2, 3], [2, 3])]  # from element 4
+
+        # more general cases:
+        K = ca.MX.zeros((8, 8))
+        K[np.ix_([0, 1, 2, 3], [0, 1, 2, 3])] += k[0]
+        K[np.ix_([2, 3, 4, 5], [2, 3, 4, 5])] += k[1]
+        K[np.ix_([0, 1, 4, 5], [0, 1, 4, 5])] += k[2]
+        K[np.ix_([6, 7, 4, 5], [6, 7, 4, 5])] += k[3]
+
+        return K
+
+    def k(self, l, A, theta):  # element stiffness matrix (spring)
+        E = 29.5e6
+        # E = 600
+        c = np.cos(theta)
+        s = np.sin(theta)
+        k = np.array([[c**2, c*s, -c**2, -c*s],
+                      [c*s, s**2, -c*s, -s**2],
+                      [-c**2, -c*s, c**2, c*s],
+                      [-c*s, -s**2, c*s, s**2]])
+        k *= A*E/l
+        return k
+
+    def h(self, x):  # constraint
+        l = [40, 30, 50, 40]
+        v = 0
+        for i in range(4):
+            v += x[i] * l[i]
+        v0 = np.sum(l)
+        return v - v0
 
 # for debug only
 class TestDynamics:
