@@ -6,6 +6,7 @@ import math
 import scipy.io
 import matplotlib.pyplot as plt
 
+
 class Simulate:
 
     def __init__(self, N, u, d, initial_state):
@@ -21,8 +22,8 @@ class Simulate:
 
     # dynamic function
     def f(self, x_, u_, d_): return [-0.75 + 0.75 * np.cos(x_[2]) + u_ * x_[1],
-                               0.75 * np.sin(x_[2]) - u_ * x_[0],
-                               d_ - u_]
+                                     0.75 * np.sin(x_[2]) - u_ * x_[0],
+                                     d_ - u_]
 
     def l(self, x_): return np.sqrt(x_[0] ** 2 + x_[1] ** 2 + 1e-9) - 0.25
 
@@ -52,7 +53,7 @@ class Utility:
         """
         x_e = [np.array([0, 0, 0])]
         x_p = [x0]
-        for i in range(prob.N-1):
+        for i in range(prob.N - 1):
             x_e_new = np.array([x_e[i][0] + prob.v_e * np.cos(x_e[i][2]) * prob.dt,
                                 x_e[i][1] + prob.v_e * np.sin(x_e[i][2]) * prob.dt,
                                 x_e[i][2] + u[i] * prob.dt])
@@ -68,3 +69,5 @@ class Utility:
         plt.plot(x_e[:, 0], x_e[:, 1], 'r', x_p[:, 0], x_p[:, 1], 'b')
         plt.show()
 
+        return {"evader states": x_e,
+                "pursuer states": x_p}
