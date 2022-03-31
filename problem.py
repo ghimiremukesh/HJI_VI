@@ -78,7 +78,7 @@ class Test:
 class TestFEA:
     def F(self, x):  # to minimize strain energy
         K = self.K(x)  # stiffness matrix
-        f = np.array([-20000, 0, 25000])  # external force
+        f = np.array([20000, 20000, 0])  # external force
         K_ = K[np.ix_([2, 4, 5], [2, 4, 5])]
         u = ca.mtimes(ca.inv(K_), f)  # deflection
         e = ca.mtimes(ca.mtimes(ca.transpose(u), K_), u)  # strain energy

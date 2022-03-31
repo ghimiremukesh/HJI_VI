@@ -49,8 +49,8 @@ def solve_evade(d, u_last, x0):
     opti.minimize(-prob.F(x))
 
     # boundary and control conditions
-    opti.subject_to(opti.bounded(-1.0, x1, 1.0))
-    opti.subject_to(opti.bounded(-1.0, x2, 1.0))
+    # opti.subject_to(opti.bounded(-1.0, x1, 1.0))
+    # opti.subject_to(opti.bounded(-1.0, x2, 1.0))
     opti.subject_to(opti.bounded(-math.pi, x3, math.pi))
 
     opti.subject_to(opti.bounded(-3, u, 3))
@@ -108,8 +108,8 @@ def solve_pursue(u, d_last, x0):
     opti.minimize(prob.F(x))
 
     # boundary and control conditions
-    opti.subject_to(opti.bounded(-1.0, x1, 1.0))
-    opti.subject_to(opti.bounded(-1.0, x2, 1.0))
+    # opti.subject_to(opti.bounded(-1.0, x1, 1.0))
+    # opti.subject_to(opti.bounded(-1.0, x2, 1.0))
     opti.subject_to(opti.bounded(-math.pi, x3, math.pi))
 
     opti.subject_to(opti.bounded(-3, d, 3))
@@ -134,12 +134,15 @@ def solve_pursue(u, d_last, x0):
 util = Utility()
 itr = 1000
 x0 = np.array([[0.5], [-0.5], [1.586]])
+# x0 = np.array([[-0.52070], [0.88401], [-1.96348]])
+# x0 = np.array([[-0.5], [0.9], [-1.586]])
+
 d = [0] * (N - 1)
 u = [0] * (N - 1)
 for i in range(itr):
     u, _ = solve_evade(d, u, x0)
     util.brt_plot(u, d, x0.flatten(), prob)
 
-    d, _ = solve_evade(u, d, x0)
+    d, _ = solve_pursue(u, d, x0)
     util.brt_plot(u, d, x0.flatten(), prob)
 

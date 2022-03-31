@@ -134,7 +134,7 @@ def solve_pursue(u, d_last, x0):
 
 util = Utility()
 itr = 3
-x0 = np.array([[0.5], [-0.5], [1.586]])
+# x0 = np.array([[0.5], [-0.5], [1.586]])
 x0 = np.array([[-0.52070], [0.88401], [-1.96348]])
 samples = 10
 x0s = np.random.uniform(-1, 1, (samples, 2, 1))
