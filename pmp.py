@@ -13,6 +13,7 @@ rho = 100
 prob = BRT(N=N, T=1.0, rho=rho)
 opti = ca.Opti()
 
+
 def solve_evade(d, u_last, x0):
     # control variable
     d_static = d
@@ -43,7 +44,7 @@ def solve_evade(d, u_last, x0):
     # opti.set_initial(x1, x_last[0, :].tolist())
     # opti.set_initial(x2, x_last[1, :].tolist())
     # opti.set_initial(x3, x_last[2, :].tolist())
-    # opti.set_initial(u, u_last)
+    opti.set_initial(u, u_last)
 
     # adv. obj to minimize the min of l(x)
     opti.minimize(-prob.F(x))
@@ -102,7 +103,7 @@ def solve_pursue(u, d_last, x0):
     # opti.set_initial(x1, x_last[0, :].tolist())
     # opti.set_initial(x2, x_last[1, :].tolist())
     # opti.set_initial(x3, x_last[2, :].tolist())
-    # opti.set_initial(d, d_last)
+    opti.set_initial(d, d_last)
 
     # adv. obj to minimize the min of l(x)
     opti.minimize(prob.F(x))
@@ -139,10 +140,39 @@ x0 = np.array([[0.5], [-0.5], [1.586]])
 
 d = [0] * (N - 1)
 u = [0] * (N - 1)
-for i in range(itr):
-    u, _ = solve_evade(d, u, x0)
-    util.brt_plot(u, d, x0.flatten(), prob)
 
-    d, _ = solve_pursue(u, d, x0)
-    util.brt_plot(u, d, x0.flatten(), prob)
+# set termination criterion
+u_prev = u
+d_prev = d
+change = 1
+tol = 0.05  # Tolerance for norm
 
+# generate ground truth data for #samples
+samples = 10
+x0s = np.random.uniform(-1, 1, (samples, 2, 1))
+x0s = np.concatenate((x0s, np.random.uniform(-math.pi, math.pi, (samples, 1, 1))), 1)
+data_ground = {"evader states": [],
+               "pursuer states": []}
+
+for x0 in x0s:
+    while change > tol:
+        u, _ = solve_evade(d, u, x0)
+        # util.brt_plot(u, d, x0.flatten(), prob)
+
+        d, _ = solve_pursue(u, d, x0)
+        # util.brt_plot(u, d, x0.flatten(), prob)
+
+        change = (np.linalg.norm(d - d_prev) < np.linalg.norm(u - u_prev)) * np.linalg.norm(d - d_prev) + \
+                 (np.linalg.norm(d - d_prev) > np.linalg.norm(u - u_prev)) * np.linalg.norm(u - u_prev)  # pick whichever is low
+
+        u_prev = u
+        d_prev = d
+
+    # add to the list of ground truth data
+    gt = util.brt_plot(u, d, x0.flatten(), prob)  # returns a dictionary of the ground truth
+
+    # add to the ground truth data
+    data_ground["evader states"].append(gt["evader states"])
+    data_ground["pursuer states"].append(gt["pursuer states"])
+
+print()
