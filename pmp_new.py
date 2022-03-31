@@ -139,6 +139,7 @@ x0 = np.array([[-0.52070], [0.88401], [-1.96348]])
 samples = 10
 x0s = np.random.uniform(-1, 1, (samples, 2, 1))
 x0s = np.concatenate((x0s, np.random.uniform(-math.pi, math.pi, (samples, 1, 1))), 1)
+x0s[0, :] = x0
 
 errors = []
 dataground = {"evader state": [],
@@ -148,8 +149,14 @@ dataground = {"evader state": [],
 d = [0] * (N - 1)
 u = [0] * (N - 1)
 fail = False
+repeat = True
+
+u_prev = None
+d_prev = None
+change = None
+
 for x0 in x0s:
-    for i in range(itr):
+    for _ in range(3):
         try:
             u, _ = solve_evade(d, u, x0)
         except:
@@ -158,7 +165,6 @@ for x0 in x0s:
             break
         util.brt_plot(u, d, x0.flatten(), prob)
 
-        # d, _ = solve_evade(u, d, x0)
         try:
             d, _ = solve_pursue(u, d, x0)
         except:
