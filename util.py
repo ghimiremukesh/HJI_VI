@@ -67,10 +67,10 @@ class Utility:
 
         x_e = np.asarray(x_e)
         x_p = np.asarray(x_p)
-        plt.plot(x_e[:, 0], x_e[:, 1], 'r', x_p[:, 0], x_p[:, 1], 'b')
-        plt.plot(x_p[0, 0], x_p[0, 1], marker='o')
-        plt.savefig("trajs/"+str(x0) + ".png")
-        plt.show()
+        # plt.plot(x_e[:, 0], x_e[:, 1], 'r', x_p[:, 0], x_p[:, 1], 'b')
+        # plt.plot(x_p[0, 0], x_p[0, 1], marker='o')
+        # plt.savefig("trajs/"+str(x0) + ".png")
+        # plt.show()
 
         return {"evader_states": x_e,
                 "pursuer_states": x_p}

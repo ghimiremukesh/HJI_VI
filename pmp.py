@@ -159,7 +159,7 @@ x0s = np.random.uniform(-1, 1, (samples, 2, 1))
 x0s = np.concatenate((x0s, np.random.uniform(-math.pi, math.pi, (samples, 1, 1))), 1)
 data_ground = {"evader_states": [],
                "pursuer_states": []}
-x0s[0, :] = np.array([[ 0.43246974], [-0.56621768], [2.3874406]])
+x0s[0, :] = np.array([[0.01245493], [0.17131554], [0.77609402]])
 for x0 in x0s:
     while change > tol:
         u, _, costate_u = solve_evade(d, u, x0)
@@ -173,8 +173,8 @@ for x0 in x0s:
         co_norm = np.linalg.norm(costate_d, ord=-math.inf, axis=1)
         idx = np.where(co_norm < tol)[0][0]  # get the start index from where the control doesn't matter
         # calculate the change in control[:idx]
-        change = (np.linalg.norm(d[:idx] - d_prev[:idx]) < np.linalg.norm(u[:idx] - u_prev[:idx])) * np.linalg.norm(d[:idx] - d_prev[:idx]) + \
-                 (np.linalg.norm(d[:idx] - d_prev[:idx]) > np.linalg.norm(u[:idx] - u_prev[:idx])) * np.linalg.norm(u[:idx] - u_prev[:idx])  # pick whichever is min
+        change = (np.linalg.norm(d[:idx] - d_prev[:idx]) > np.linalg.norm(u[:idx] - u_prev[:idx])) * np.linalg.norm(d[:idx] - d_prev[:idx]) + \
+                 (np.linalg.norm(d[:idx] - d_prev[:idx]) < np.linalg.norm(u[:idx] - u_prev[:idx])) * np.linalg.norm(u[:idx] - u_prev[:idx])  # pick whichever is max
 
         u_prev = u
         d_prev = d
