@@ -23,7 +23,7 @@ num_times = len(times)
 for i in range(len(thetas)):
     theta_indices_matlab.append(np.argmin(abs(theta_values - thetas[i])))
 
-# fig_brs = plt.figure(figsize=(5*num_thetas, 5*num_times))
+fig_brs = plt.figure(figsize=(5*num_thetas, 5*num_times))
 fig_valfunc_LS = plt.figure(figsize=(5*num_thetas, 5*num_times))
 fig_valfunc_pmp = plt.figure(figsize=(5*num_thetas, 5*num_times))
 
@@ -31,6 +31,19 @@ for i in range(len(times)):
     for j in range(len(thetas)):
         valfunc_true = true_data['data'][:, :, theta_indices_matlab[j], time_indices_matlab[i]] # LS val
         valfunc_pmp = np.reshape(val_funcs["PMP"][:, :, theta_indices_matlab[j], time_indices_matlab[i]-1], valfunc_true.shape)
+
+        ## Plot the zero level set
+        # Fetch the BRS
+        brs_predicted = (valfunc_pmp <= 0.001) * 1.
+        brs_actual = (valfunc_true <= 0.001) * 1.
+        # Plot it
+        ax = fig_brs.add_subplot(num_times, num_thetas, (j + 1) + i * num_thetas)
+        ax.set_title('t = %0.2f, theta = %0.2f' % (times[i], thetas[j]))
+        s1 = ax.imshow(brs_predicted.T, cmap='bwr', origin='lower', vmin=-1., vmax=1., extent=(-1., 1., -1., 1.),
+                       interpolation='bilinear')
+        s2 = ax.imshow(brs_actual.T, cmap='seismic', alpha=0.5, origin='lower', vmin=-1., vmax=1.,
+                       extent=(-1., 1., -1., 1.), interpolation='bilinear')
+
 
         ## Plot the actual value function
         ax = fig_valfunc_LS.add_subplot(num_times, num_thetas, (j + 1) + i * num_thetas)
@@ -46,3 +59,4 @@ for i in range(len(times)):
 
         fig_valfunc_LS.savefig('Air3D_LS_valfunc.png')
         fig_valfunc_pmp.savefig('Air3D_PMP_valfunc.png')
+        fig_brs.savefig('BRS_Comparison.png')
