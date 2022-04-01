@@ -70,7 +70,10 @@ def solve_evade(d, u_last, x0):
     res_u = sol.value(u)
     res_obj = np.min(prob.l_batch(res_x))
 
-    return res_u, res_x
+    # return all costates
+    costates = [sol.value(opti.dual(con[i])) for i in range(N-1)]
+
+    return res_u, res_x, costates
 
 
 def solve_pursue(u, d_last, x0):
@@ -129,7 +132,10 @@ def solve_pursue(u, d_last, x0):
     res_d = sol.value(d)
     res_obj = np.min(prob.l_batch(res_x))
 
-    return res_d, res_x
+    # return all costates
+    costates = [sol.value(opti.dual(con[i])) for i in range(N-1)]
+
+    return res_d, res_x, costates
 
 
 util = Utility()
@@ -145,25 +151,30 @@ u = [0] * (N - 1)
 u_prev = u
 d_prev = d
 change = 1
-tol = 0.05  # Tolerance for norm
+tol = 1e-3  # Tolerance for norm
 
 # generate ground truth data for #samples
-samples = 10
+samples = 100
 x0s = np.random.uniform(-1, 1, (samples, 2, 1))
 x0s = np.concatenate((x0s, np.random.uniform(-math.pi, math.pi, (samples, 1, 1))), 1)
-data_ground = {"evader states": [],
-               "pursuer states": []}
-
+data_ground = {"evader_states": [],
+               "pursuer_states": []}
+x0s[0, :] = np.array([[ 0.43246974], [-0.56621768], [2.3874406]])
 for x0 in x0s:
     while change > tol:
-        u, _ = solve_evade(d, u, x0)
+        u, _, costate_u = solve_evade(d, u, x0)
         # util.brt_plot(u, d, x0.flatten(), prob)
 
-        d, _ = solve_pursue(u, d, x0)
-        # util.brt_plot(u, d, x0.flatten(), prob)
+        d, _, costate_d = solve_pursue(u, d, x0)
+        util.brt_plot(u, d, x0.flatten(), prob)
 
-        change = (np.linalg.norm(d - d_prev) < np.linalg.norm(u - u_prev)) * np.linalg.norm(d - d_prev) + \
-                 (np.linalg.norm(d - d_prev) > np.linalg.norm(u - u_prev)) * np.linalg.norm(u - u_prev)  # pick whichever is low
+        # find the point after which the co-states are almost zero
+        # and check the convergence of control before that
+        co_norm = np.linalg.norm(costate_d, ord=-math.inf, axis=1)
+        idx = np.where(co_norm < tol)[0][0]  # get the start index from where the control doesn't matter
+        # calculate the change in control[:idx]
+        change = (np.linalg.norm(d[:idx] - d_prev[:idx]) < np.linalg.norm(u[:idx] - u_prev[:idx])) * np.linalg.norm(d[:idx] - d_prev[:idx]) + \
+                 (np.linalg.norm(d[:idx] - d_prev[:idx]) > np.linalg.norm(u[:idx] - u_prev[:idx])) * np.linalg.norm(u[:idx] - u_prev[:idx])  # pick whichever is min
 
         u_prev = u
         d_prev = d
@@ -172,7 +183,7 @@ for x0 in x0s:
     gt = util.brt_plot(u, d, x0.flatten(), prob)  # returns a dictionary of the ground truth
 
     # add to the ground truth data
-    data_ground["evader states"].append(gt["evader states"])
-    data_ground["pursuer states"].append(gt["pursuer states"])
+    data_ground["evader_states"].append(gt["evader_states"])
+    data_ground["pursuer_states"].append(gt["pursuer_states"])
 
-print()
+scipy.io.savemat("ground_truth_pmp.mat", data_ground)
