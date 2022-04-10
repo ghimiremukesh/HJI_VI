@@ -36,7 +36,7 @@ Set up a conda environment with all dependencies like so:
 
 `validation_scripts\closedloop_traj_generation.py`: use value network as controller to generate closed-loop trajectory
 
-`validation_scripts\value_generation.py`: use value network and state from ground truth to generate value and costate
+`validation_scripts\value_generation.py`: use value network and state from ground truth data to generate value and costate
 
 `validation_scripts\value_landscape_generation.py`: use value network to generate value landscape
 
