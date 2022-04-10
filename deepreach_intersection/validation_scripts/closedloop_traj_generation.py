@@ -52,7 +52,7 @@ def value_action(X, t, model, model_type):
     max_acc = torch.tensor([10.], dtype=torch.float32).cuda()
     min_acc = torch.tensor([-5.], dtype=torch.float32).cuda()
 
-    if model_type == 'BRAT':
+    if model_type == 'HJI':
         # action for agent 1
         U1 = 0.5 * lam11_2
 
@@ -64,7 +64,7 @@ def value_action(X, t, model, model_type):
         U2[torch.where(U2 > max_acc)] = max_acc
         U2[torch.where(U2 < min_acc)] = min_acc
 
-    if model_type == 'HJI':
+    if model_type == 'BRAT':
         # action for agent 1
         U1 = lam11_2
 
