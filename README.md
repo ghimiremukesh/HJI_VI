@@ -26,6 +26,14 @@ Set up a conda environment with all dependencies like so:
 
 `loss_functions.py`: loss function definiton for value network. This file includes two loss_function types: HJI VI(BRAT) and HJI
 
+`modules.py`: network architecture setting
+
+`training.py`: network training
+
+`diff_operators.py`: include hessian, jacobian, etc. calculation
+
+`training curve_plot.py`: plot training curve of network
+
 `validation_scripts\closedloop_traj_generation.py`: use value network as controller to generate closed-loop trajectory
 
 `validation_scripts\value_generation.py`: use value network and state from ground truth to generate value and costate
