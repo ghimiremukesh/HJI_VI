@@ -73,7 +73,7 @@ for i in range(N):
         d2 = x2[i][j]
         v2 = 18.
         X_nn = np.vstack((d1, v1, d2, v2))
-        t_nn = np.array([[3.]])
+        t_nn = np.array([[1.5]])  # initial time
         y1, y2 = value_function(X_nn, t_nn, model)
         V1[i][j] = y1
         V2[i][j] = y2

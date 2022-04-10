@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     X0 = X0.T
 
-    Time = np.linspace(0, 2.0, num=151)
+    Time = np.linspace(0, 1.5, num=101)
     dt = Time[1] - Time[0]
     Time = np.flip(Time)  # invert time to fit for network input setting
 

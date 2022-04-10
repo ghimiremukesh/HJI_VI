@@ -10,9 +10,9 @@ import numpy as np
 import scipy.io as scio
 
 def value_function(X, t, model):
-    d1 = 2.0 * (X[0, :] - 15) / (105 - 15) - 1.
+    d1 = 2.0 * (X[0, :] - 15) / (60 - 15) - 1.
     v1 = 2.0 * (X[1, :] - 15) / (32 - 15) - 1.
-    d2 = 2.0 * (X[2, :] - 15) / (105 - 15) - 1.
+    d2 = 2.0 * (X[2, :] - 15) / (60 - 15) - 1.
     v2 = 2.0 * (X[3, :] - 15) / (32 - 15) - 1.
     X = np.vstack((d1, v1, d2, v2))
 
@@ -81,8 +81,8 @@ if __name__ == '__main__':
     idx0 = np.nonzero(np.equal(test_data.pop('t0'), 0))[1]
     print(len(idx0))
 
-    N = 151
-    Time = np.linspace(0, 2.0, num=N)
+    N = 101
+    Time = np.linspace(0, 1.5, num=N)
     dt = Time[1] - Time[0]
     Time = np.flip(Time)  # invert time to fit for network input setting
 
