@@ -14,6 +14,10 @@ The optimization uses casadi as an interface and ipopt as solver.
 To generate the trajectory using the value network, first download the checkpoints as mentioned in the [deepreach](https://github.com/smlbansal/deepreach/tree/b0666c1113c5bf235284ba9634781da92d2f3fab) submodule from their [google drive](https://drive.google.com/file/d/18VkOTctkzuYuyK2GRwQ4wmN92WhdXtvS/view?usp=sharing). Then run the generate_trajectory with appropriate path settings (line #22 and #238). 
 
 ## deepreach_intersection
+Set up a conda environment with all dependencies like so:
+
+conda env create -f environment.yml
+conda activate siren
 
 `dataio.py`: generate train data for value network. This file includes two data types: HJI VI(BRAT) and HJI
 
