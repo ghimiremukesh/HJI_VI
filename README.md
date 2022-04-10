@@ -20,6 +20,8 @@ Set up a conda environment with all dependencies like so:
 
 `conda activate siren`
 
+### function of python file
+
 `dataio.py`: generate train data for value network. This file includes two data types: HJI VI(BRAT) and HJI
 
 `loss_functions.py`: loss function definiton for value network. This file includes two loss_function types: HJI VI(BRAT) and HJI
