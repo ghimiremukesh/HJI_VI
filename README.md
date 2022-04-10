@@ -16,8 +16,13 @@ To generate the trajectory using the value network, first download the checkpoin
 ## Deepreach_intersection
 
 `dataio.py`: generate train data for value network. This file includes two data types: HJI VI(BRAT) and HJI
+
 `loss_functions.py`: loss function definiton for value network. This file includes two loss_function types: HJI VI(BRAT) and HJI
+
 `validation_scripts\closedloop_traj_generation.py`: use value network as controller to generate closed-loop trajectory
+
 `validation_scripts\value_generation.py`: use value network and state from ground truth to generate value and costate
+
 `validation_scripts\value_landscape_generation.py`: use value network to generate value landscape
+
 `validation_scripts\value_landscape_plot`: plot value landscape
