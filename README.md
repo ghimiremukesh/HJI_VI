@@ -57,4 +57,4 @@ of HJI VI(BRAT) and HJI can review `dataio.py` and `loss_functions.py`. `modules
 
 * trained model and loss information is stored in `experiment_scripts\log\xxx\checkpoints`. Completed model is named `model_final.pth` and final train loss is named `train_losses_final.txt`. Run `training curve_plot.py` to check the train loss if need. Please make sure to put `train_losses_final.txt` in the correct folder.
  
-* run `validation_scripts\value_landscape_plot.py` to check value landscape in d1-d2 figure. `validation_scripts` includes file to generate trajectory and value. Please review descriptions in `function of python file`.
+* run `validation_scripts\value_landscape_plot.py` to check value landscape in d1-d2 figure. `validation_scripts` folder includes file to generate trajectory and value. Please review descriptions in `function of python file`.
