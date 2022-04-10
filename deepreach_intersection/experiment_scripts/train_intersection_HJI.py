@@ -47,7 +47,7 @@ p.add_argument('--minWith', type=str, default='target', required=False, choices=
 
 p.add_argument('--clip_grad', default=0.0, type=float, help='Clip gradient.')
 p.add_argument('--use_lbfgs', default=False, type=bool, help='use L-BFGS.')
-p.add_argument('--pretrain', action='store_true', default=False, required=False, help='Pretrain dirichlet conditions')
+p.add_argument('--pretrain', action='store_true', default=True, required=False, help='Pretrain dirichlet conditions')
 
 p.add_argument('--seed', type=int, default=0, required=False, help='Seed for the simulation.')
 
