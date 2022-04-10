@@ -16,8 +16,9 @@ To generate the trajectory using the value network, first download the checkpoin
 ## deepreach_intersection
 Set up a conda environment with all dependencies like so:
 
-conda env create -f environment.yml
-conda activate siren
+`conda env create -f environment.yml`
+
+`conda activate siren`
 
 `dataio.py`: generate train data for value network. This file includes two data types: HJI VI(BRAT) and HJI
 
