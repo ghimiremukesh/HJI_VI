@@ -50,3 +50,10 @@ Set up a conda environment with all dependencies like so:
 (default setting is True)  
 
 `experiment_scripts\train_intersection_HJI.py`: set up value network of HJI training. If need pretrain (fit for boundary condition), the parameter can set as True (default setting is True)
+
+### experiment running
+* run `experiment_scripts\train_intersection_HJI.py` or `experiment_scripts\train_intersection_BRAT.py` to train value network. Data generation and loss definition
+of HJI VI(BRAT) and HJI can review `dataio.py` and `loss_functions.py`. `modules.py`, `training.py` and `diff_operators.py` is based on siren paper without any change. 
+
+* trained model and loss information is stored in `experiment_scripts\log\xxx\checkpoints`. Completed model is named `model_final.pth` and final train loss is named `train_losses_final.txt`. Run `training curve_plot.py` to check the train loss if need. Please make sure to put `train_losses_final.txt` in the correct folder.
+ 
