@@ -12,9 +12,9 @@ import scipy.io as scio
 def value_action(X, t, model, model_type):
     # normalize the state for agent 1, agent 2
     d1 = 2.0 * (X[0, :] - 15) / (60 - 15) - 1.
-    v1 = 2.0 * (X[1, :] - 14) / (32 - 15) - 1.
+    v1 = 2.0 * (X[1, :] - 15) / (32 - 15) - 1.
     d2 = 2.0 * (X[2, :] - 15) / (60 - 15) - 1.
-    v2 = 2.0 * (X[3, :] - 14) / (32 - 15) - 1.
+    v2 = 2.0 * (X[3, :] - 15) / (32 - 15) - 1.
     X = np.vstack((d1, v1, d2, v2))
 
     X = torch.tensor(X, dtype=torch.float32, requires_grad=True).T
