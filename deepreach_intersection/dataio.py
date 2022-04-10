@@ -177,7 +177,7 @@ class IntersectionHJI(Dataset):
             coords_1[-self.N_src_samples:, 4] = torch.zeros(self.N_src_samples, 1).uniform_(-0.8, 0.3).squeeze()
             coords_2[-self.N_src_samples:, 4] = torch.zeros(self.N_src_samples, 1).uniform_(-0.8, 0.3).squeeze()
 
-        # set up boundary condition: V(T) = alpha*X(T) - (V(T) - V(0))^2
+        # set up boundary condition: V(T) = alpha*d(T) - (v(T) - v(0))^2
         boundary_values_1 = self.alpha * ((coords_1[:, 1:2] + 1) * (60 - 15) / 2 + 15) - \
                             ((coords_1[:, 2:3] + 1) * (32 - 15) / 2 + 15 - 18) ** 2
         boundary_values_2 = self.alpha * ((coords_2[:, 1:2] + 1) * (60 - 15) / 2 + 15) - \
