@@ -1,0 +1,52 @@
+# For now, we will ignore the built pdf file
+hscc-zonotope-viability.pdf
+
+
+# Ignore Emacs old versions.
+*~
+
+# Ignore Matlab autosave files.
+*.asv
+
+* Ignore archives.
+*.gz
+*.zip
+
+# Ignore OSX file directory and LaTeX software files
+.DS_Store
+.texpadtmp/
+
+# This part taken from GitHub's recommended latex .gitignore file.
+*.acn
+*.acr
+*.alg
+*.aux
+*.blg
+# Keep the bbl file so we don't always have to regenerate the bibliography.
+#*.bbl
+*.dvi
+*.fdb_latexmk
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.ist
+*.lof
+*.log
+*.lot
+*.maf
+*.mtc
+*.mtc0
+*.nav
+*.nlo
+*.out
+*.pdfsync
+*.ps
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
+*.xdy
+*.tdo
