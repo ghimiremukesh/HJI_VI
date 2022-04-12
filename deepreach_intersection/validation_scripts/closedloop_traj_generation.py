@@ -135,6 +135,12 @@ if __name__ == '__main__':
     v2 = np.zeros((len(idx0), Time.shape[0]))
     u2 = np.zeros((len(idx0), Time.shape[0]))
 
+    for n in range(len(idx0)):
+        d1[n][0] = X0[0, n]
+        v1[n][0] = X0[1, n]
+        d2[n][0] = X0[2, n]
+        v2[n][0] = X0[3, n]
+
     start_time = time.time()
 
     # closed-loop trajectory generation
