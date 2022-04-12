@@ -29,9 +29,6 @@ def value_function(X, t, model):
     y1 = model_output['model_out'][:, :cut_index]  # (meta_batch_size, num_points, 1); agent 1's value
     y2 = model_output['model_out'][:, cut_index:]  # agent 2's value
 
-    y1 = torch.log(y1)
-    y2 = torch.log(y2)
-
     return y1, y2
 
 ckpt_path = './model_final.pth'
