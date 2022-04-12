@@ -81,7 +81,7 @@ if __name__ == '__main__':
     idx0 = np.nonzero(np.equal(test_data.pop('t0'), 0))[1]
     print(len(idx0))
 
-    N = 101
+    N = 76
     Time = np.linspace(0, 1.5, num=N)
     dt = Time[1] - Time[0]
     Time = np.flip(Time)  # invert time to fit for network input setting
