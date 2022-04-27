@@ -145,7 +145,6 @@ if __name__ == '__main__':
 
     X_OUT = X
     V_OUT = np.vstack((V1, V2))
-    time = np.array([np.linspace(0, 3, num=100)])
     t_OUT = t
 
     data = {'X': X_OUT,
