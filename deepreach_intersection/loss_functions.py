@@ -213,8 +213,8 @@ def initialize_intersection_HJI(dataset, minWith):
             diff_constraint_hom = torch.cat((diff_constraint_hom_1, diff_constraint_hom_2), dim=0)
 
         # boundary condition check
-        dirichlet_1 = y1[dirichlet_mask] - source_boundary_values[:, :y1.shape[1]][dirichlet_mask]
-        dirichlet_2 = y2[dirichlet_mask] - source_boundary_values[:, y2.shape[1]:][dirichlet_mask]
+        dirichlet_1 = y1[dirichlet_mask] - torch.exp(source_boundary_values[:, :y1.shape[1]][dirichlet_mask])
+        dirichlet_2 = y2[dirichlet_mask] - torch.exp(source_boundary_values[:, y2.shape[1]:][dirichlet_mask])
         dirichlet = torch.cat((dirichlet_1, dirichlet_2), dim=0)
 
         # A factor of (2e5, 100) to make loss roughly equal
