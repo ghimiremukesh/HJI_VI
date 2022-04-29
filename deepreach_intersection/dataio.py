@@ -141,13 +141,6 @@ class IntersectionHJI(Dataset):
             coords_1 = torch.cat((time, coords_1), dim=1)
             coords_2 = torch.cat((time, coords_2), dim=1)
 
-            # velocity in the range [17m/s, 26m/s] when t=1.5s
-            coords_1[:, 2] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-            coords_2[:, 2] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-
-            coords_1[:, 4] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-            coords_2[:, 4] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-
         else:
             # slowly grow time values from start time
             # this currently assumes start_time = 0 and max time value is tMax
@@ -157,25 +150,9 @@ class IntersectionHJI(Dataset):
             coords_1 = torch.cat((time, coords_1), dim=1)
             coords_2 = torch.cat((time, coords_2), dim=1)
 
-            if self.counter == 0:
-                coords_1[:, 2] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-                coords_2[:, 2] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-
-                coords_1[:, 4] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-                coords_2[:, 4] = torch.zeros(self.numpoints, 1).uniform_(-0.8, 0.3).squeeze()
-
-            else:
-                pass
-
             # make sure we always have training samples at the initial time
             coords_1[-self.N_src_samples:, 0] = start_time
             coords_2[-self.N_src_samples:, 0] = start_time
-
-            coords_1[-self.N_src_samples:, 2] = torch.zeros(self.N_src_samples, 1).uniform_(-0.8, 0.3).squeeze()
-            coords_2[-self.N_src_samples:, 2] = torch.zeros(self.N_src_samples, 1).uniform_(-0.8, 0.3).squeeze()
-
-            coords_1[-self.N_src_samples:, 4] = torch.zeros(self.N_src_samples, 1).uniform_(-0.8, 0.3).squeeze()
-            coords_2[-self.N_src_samples:, 4] = torch.zeros(self.N_src_samples, 1).uniform_(-0.8, 0.3).squeeze()
 
         # set up boundary condition: V(T) = alpha*d(T) - (v(T) - v(0))^2
         boundary_values_1 = self.alpha * ((coords_1[:, 1:2] + 1) * (60 - 15) / 2 + 15) - \
