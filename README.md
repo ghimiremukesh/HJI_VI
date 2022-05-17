@@ -1,12 +1,5 @@
-# HJI_VI
-
-
-The optimization uses casadi as an interface and ipopt as solver. 
-
-
-`d_star_solution` solves for optimum adversary control
-
-`u_star_solution` solves for optimum ego control 
+## Imperfect Information Differential Game
+This branch deals with modeling the interaction between two vehicles as incomplete information differential game. Each agent has a belief of the other agent's parameter ($$\theta$$), which encodes the agressiveness of the agent. 
 
 
 ## Generating Trajectory
