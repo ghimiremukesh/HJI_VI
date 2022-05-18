@@ -105,10 +105,17 @@ def initialize_intersection_BRAT(dataset, minWith):
 
 def initialize_intersection_HJI(dataset, minWith):
     def intersection_hji(model_output, gt):
+        # Dynamics w/belief (p)
+        # \dot x = v
+        # \dot v = u
+        # \dot p = sign(2p - 1), p = belief
+
         source_boundary_values = gt['source_boundary_values']
         x = model_output['model_in']
         y = model_output['model_out']
         cut_index = x.shape[1] // 2
+        p1 = x[:, :cut_index, 5]  # agent 1's belief of agent 2
+        p2 = x[:, cut_index:, 5]  # agent 2's belief of agent 1
 
         y1 = model_output['model_out'][:, :cut_index]   # (meta_batch_size, num_points, 1); agent 1's value
         y2 = model_output['model_out'][:, cut_index:]   # (meta_batch_size, num_points, 1); agent 2's value
@@ -128,7 +135,8 @@ def initialize_intersection_HJI(dataset, minWith):
         lam11_1 = dvdx_1[:, :1] / ((60 - 15) / 2)  # lambda_11
         lam11_2 = dvdx_1[:, 1:2] / ((32 - 15) / 2)  # lambda_11
         lam12_1 = dvdx_1[:, 2:3] / ((60 - 15) / 2)  # lambda_12
-        lam12_2 = dvdx_1[:, 3:] / ((32 - 15) / 2)  # lambda_12
+        lam12_2 = dvdx_1[:, 3:4] / ((32 - 15) / 2)  # lambda_12
+        lam11_3 = dvdx_1[:, 4:5]  # lambda_11 (costate corr. to belief)
 
         # agent 2: partial gradient of V w.r.t. time and state
         dvdt_2 = dv_2[..., 0, 0].squeeze()
@@ -136,9 +144,10 @@ def initialize_intersection_HJI(dataset, minWith):
 
         # unnormalize the costate for agent 2
         lam21_1 = dvdx_2[:, 2:3] / ((60 - 15) / 2)  # lambda_21
-        lam21_2 = dvdx_2[:, 3:] / ((32 - 15) / 2)  # lambda_21
+        lam21_2 = dvdx_2[:, 3:4] / ((32 - 15) / 2)  # lambda_21
         lam22_1 = dvdx_2[:, :1] / ((60 - 15) / 2)  # lambda_22
         lam22_2 = dvdx_2[:, 1:2] / ((32 - 15) / 2)  # lambda_22
+        lam21_3 = dvdx_2[:, 4:5]  # lambda_21 (belief costate)
 
         # calculate the collision area for aggressive-aggressive case
         R1 = torch.tensor([70.], dtype=torch.float32).cuda()   # road length for agent 1
@@ -147,18 +156,18 @@ def initialize_intersection_HJI(dataset, minWith):
         W2 = torch.tensor([1.5], dtype=torch.float32).cuda()   # car width for agent 1
         L1 = torch.tensor([3.], dtype=torch.float32).cuda()    # car length for agent 1
         L2 = torch.tensor([3.], dtype=torch.float32).cuda()    # car length for agent 1
-        theta1 = torch.tensor([1.], dtype=torch.float32).cuda()   # behavior for agent 1
-        theta2 = torch.tensor([1.], dtype=torch.float32).cuda()   # behavior for agent 2
+        theta_a = torch.tensor([1.], dtype=torch.float32).cuda()   # behavior for agent 1
+        theta_na = torch.tensor([5.], dtype=torch.float32).cuda()   # behavior for agent 2
         beta = torch.tensor([10000.], dtype=torch.float32).cuda()  # collision ratio
 
         # H = lambda^T * (-f) + L because we invert the time
         # Agent 1's action, detach and let the action as the number, not trainable variable
-        # TODO: we consider H = (dV/dt)^T * f - V*L when V = exp(U)
-        # TODO: H = (dV/dt)^T * (-f) + V*L when inverting the time, optimal action u = 1/2 * B^T * lambda / V
-        u1 = (0.5 * lam11_2 / y1).detach()
+
+
+        u1 = (0.5 * lam11_2).detach()
 
         # Agent 2's action, detach and let the action as the number, not trainable variable
-        u2 = (0.5 * lam22_2 / y2).detach()
+        u2 = (0.5 * lam22_2).detach()
 
         # set up bounds for u1 and u2
         max_acc = torch.tensor([10.], dtype=torch.float32).cuda()
@@ -179,26 +188,38 @@ def initialize_intersection_HJI(dataset, minWith):
 
         # unnormalize the state for agent 2
         d2 = (model_output['model_in'][:, :cut_index, 3:4] + 1) * (60 - 15) / 2 + 15
-        v2 = (model_output['model_in'][:, :cut_index, 4:] + 1) * (32 - 15) / 2 + 15
+        v2 = (model_output['model_in'][:, :cut_index, 4:5] + 1) * (32 - 15) / 2 + 15
 
-        # calculate the collision area lower and upper bounds
-        x1_in = ((d1 - R1 / 2 + theta1 * W2 / 2) * 5).squeeze().reshape(-1, 1).cuda()
+        # calculate the collision area lower and upper bounds (aggressive)
+        x1_in = ((d1 - R1 / 2 + theta_a * W2 / 2) * 5).squeeze().reshape(-1, 1).cuda()
         x1_out = (-(d1 - R1 / 2 - W2 / 2 - L1) * 5).squeeze().reshape(-1, 1).cuda()
-        x2_in = ((d2 - R2 / 2 + theta2 * W1 / 2) * 5).squeeze().reshape(-1, 1).cuda()
+        x2_in = ((d2 - R2 / 2 + theta_a * W1 / 2) * 5).squeeze().reshape(-1, 1).cuda()
         x2_out = (-(d2 - R2 / 2 - W1 / 2 - L2) * 5).squeeze().reshape(-1, 1).cuda()
 
         sigmoid1 = torch.sigmoid(x1_in) * torch.sigmoid(x1_out)
         sigmoid2 = torch.sigmoid(x2_in) * torch.sigmoid(x2_out)
         loss_instant = beta * sigmoid1 * sigmoid2
 
+        # calculate the collision area lower and upper bounds (non-aggressive)
+        x1_in_na = ((d1 - R1 / 2 + theta_na * W2 / 2) * 5).squeeze().reshape(-1, 1).cuda()
+        x2_in_na = ((d2 - R2 / 2 + theta_na * W1 / 2) * 5).squeeze().reshape(-1, 1).cuda()
+
+        sigmoid1_na = torch.sigmoid(x1_in_na) * torch.sigmoid(x1_out)
+        sigmoid2_na = torch.sigmoid(x2_in_na) * torch.sigmoid(x2_out)
+        loss_instant_na = beta * sigmoid1_na * sigmoid2_na
+
         # calculate instantaneous loss
-        loss_fun_1 = y1 * (u1 ** 2 + loss_instant).cuda()
-        loss_fun_2 = y2 * (u2 ** 2 + loss_instant).cuda()
+        loss_fun_1 = p1.T * ((u1 ** 2 + loss_instant.cuda())) + (1-p1).T*(y1 * (u1 ** 2 + loss_instant_na.cuda()))
+        loss_fun_2 = p2.T * ((u2 ** 2 + loss_instant.cuda())) + (1-p2).T*(y2 * (u2 ** 2 + loss_instant_na.cuda()))
+
+
 
         # calculate hamiltonian, H = lambda^T * (-f) + L because we invert the time
-        ham_1 = -lam11_1.squeeze() * v1.squeeze() - lam11_2.squeeze() * u1.squeeze() - \
+        # set alpha = const (learning rate) = 0.01 (for eg)
+        alpha = 0.01
+        ham_1 = -lam11_1.squeeze() * v1.squeeze() - lam11_2.squeeze() * u1.squeeze() - lam11_3.squeeze() * torch.sign(2*p1-1) * alpha - \
                 lam12_1.squeeze() * v2.squeeze() - lam12_2.squeeze() * u2.squeeze() + loss_fun_1.squeeze()
-        ham_2 = -lam21_1.squeeze() * v1.squeeze() - lam21_2.squeeze() * u1.squeeze() - \
+        ham_2 = -lam21_1.squeeze() * v1.squeeze() - lam21_2.squeeze() * u1.squeeze() - lam21_3.squeeze() * torch.sign(2*p2-1) * alpha - \
                 lam22_1.squeeze() * v2.squeeze() - lam22_2.squeeze() * u2.squeeze() + loss_fun_2.squeeze()
 
         # dirichlet_mask is the bool array. It evaluates whether y[dirichlet_mask] is boundary condition or not
@@ -213,8 +234,8 @@ def initialize_intersection_HJI(dataset, minWith):
             diff_constraint_hom = torch.cat((diff_constraint_hom_1, diff_constraint_hom_2), dim=0)
 
         # boundary condition check
-        dirichlet_1 = y1[dirichlet_mask] - torch.exp(source_boundary_values[:, :y1.shape[1]][dirichlet_mask])
-        dirichlet_2 = y2[dirichlet_mask] - torch.exp(source_boundary_values[:, y2.shape[1]:][dirichlet_mask])
+        dirichlet_1 = y1[dirichlet_mask] - (source_boundary_values[:, :y1.shape[1]][dirichlet_mask])
+        dirichlet_2 = y2[dirichlet_mask] - (source_boundary_values[:, y2.shape[1]:][dirichlet_mask])
         dirichlet = torch.cat((dirichlet_1, dirichlet_2), dim=0)
 
         # A factor of (2e5, 100) to make loss roughly equal
