@@ -66,7 +66,7 @@ if opt.counter_end == -1:
 '''
 Using HJI to train the value network
 '''
-dataset = dataio.IntersectionHJI(numpoints=10000,
+dataset = dataio.IntersectionHJI(numpoints=8000,
                                  pretrain=opt.pretrain, tMin=opt.tMin,
                                  tMax=opt.tMax, counter_start=opt.counter_start,
                                  counter_end=opt.counter_end,
