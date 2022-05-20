@@ -10,9 +10,10 @@ import numpy as np
 import scipy.io as scio
 
 def value_function(X, t, model):
-    d1 = 2.0 * (X[0, :] - 15) / (60 - 15) - 1.
+    # normalize the state for agent 1, agent 2
+    d1 = 2.0 * (X[0, :] - 15) / (105 - 15) - 1.
     v1 = 2.0 * (X[1, :] - 15) / (32 - 15) - 1.
-    d2 = 2.0 * (X[2, :] - 15) / (60 - 15) - 1.
+    d2 = 2.0 * (X[2, :] - 15) / (105 - 15) - 1.
     v2 = 2.0 * (X[3, :] - 15) / (32 - 15) - 1.
     X = np.vstack((d1, v1, d2, v2))
 
@@ -38,32 +39,62 @@ def value_function(X, t, model):
     dvdx_1 = dv_1[..., 0, 1:].squeeze().reshape(1, dv_1.shape[-1] - 1)
 
     # unnormalize the costate for agent 1, consider V = exp(u)
-    lam11_1 = dvdx_1[:, :1] / ((60 - 15) / 2) / y1   # lambda_11
-    lam11_2 = dvdx_1[:, 1:2] / ((32 - 15) / 2) / y1   # lambda_11
+    lam11_1 = dvdx_1[:, :1] / ((105 - 15) / 2)  # lambda_11
+    lam11_2 = dvdx_1[:, 1:2] / ((32 - 15) / 2)  # lambda_11
+    lam12_1 = dvdx_1[:, 2:3] / ((105 - 15) / 2)  # lambda_12
+    lam12_2 = dvdx_1[:, 3:] / ((32 - 15) / 2)  # lambda_12
 
     # agent 2: partial gradient of V w.r.t. state
     dvdx_2 = dv_2[..., 0, 1:].squeeze().reshape(1, dv_2.shape[-1] - 1)
 
     # unnormalize the costate for agent 2, consider V = exp(u)
-    lam22_1 = dvdx_2[:, :1] / ((60 - 15) / 2) / y2   # lambda_22
-    lam22_2 = dvdx_2[:, 1:2] / ((32 - 15) / 2) / y2   # lambda_22
+    lam21_1 = dvdx_2[:, 2:3] / ((105 - 15) / 2)  # lambda_21
+    lam21_2 = dvdx_2[:, 3:] / ((32 - 15) / 2)  # lambda_21
+    lam22_1 = dvdx_2[:, :1] / ((105 - 15) / 2)  # lambda_22
+    lam22_2 = dvdx_2[:, 1:2] / ((32 - 15) / 2)  # lambda_22
+
+    # H = lambda^T * f - L
+    # Agent 1's action
+    u1 = (0.5 * dvdx_1[:, 1:2] / ((32 - 15) / 2)).detach()
+
+    # Agent 2's action
+    u2 = (0.5 * dvdx_2[:, 1:2] / ((32 - 15) / 2)).detach()
+
+    # set up bounds for u1 and u2
+    max_acc = torch.tensor([10.], dtype=torch.float32).cuda()
+    min_acc = torch.tensor([-5.], dtype=torch.float32).cuda()
+
+    u1[torch.where(u1 > max_acc)] = max_acc
+    u1[torch.where(u1 < min_acc)] = min_acc
+    u2[torch.where(u2 > max_acc)] = max_acc
+    u2[torch.where(u2 < min_acc)] = min_acc
+
+    # detach and let the action as the number, not trainable variable
+    u1.requires_grad = False
+    u2.requires_grad = False
 
     # y1 = torch.log(y1)
     # y2 = torch.log(y2)
 
-    return y1, y2, lam11_1, lam11_2, lam22_1, lam22_2
+    return y1, y2, lam11_1, lam11_2, lam12_1, lam12_2, lam21_1, lam21_2, lam22_1, lam22_2, u1, u2
 
 if __name__ == '__main__':
 
     logging_root = './logs'
+    Num = 10
+    N_neurons = 64
 
     # Setting to plot
-    ckpt_path = './model_final_10k_pretrain_relu.pth'
-    activation = 'relu'
+    # ckpt_path = './model_epoch_HJI_' + str(Num) + '.pth'
+    # ckpt_path = './model_final_HJI_tanh_trainable_supervised_pretrain.pth'
+    # ckpt_path = './model_supervised_' + str(N_neurons) + '.pth'
+    ckpt_path = './model_final_' + str(N_neurons) + '.pth'
+    # ckpt_path = './model_epoch_50000_' + str(N_neurons) + '.pth'
+    activation = 'tanh'
 
     # Initialize and load the model
     model = modules.SingleBVPNet(in_features=5, out_features=1, type=activation, mode='mlp',
-                                 final_layer_factor=1., hidden_features=32, num_hidden_layers=5)
+                                 final_layer_factor=1., hidden_features=64, num_hidden_layers=3)
     model.cuda()
     checkpoint = torch.load(ckpt_path)
     try:
@@ -73,7 +104,7 @@ if __name__ == '__main__':
     model.load_state_dict(model_weights)
     model.eval()
 
-    test_data = scio.loadmat('data_test_a_a_18_18_cut.mat')
+    test_data = scio.loadmat('data_test_a_a_18_18_inter.mat')
 
     t = test_data['t']
     X = test_data['X']
@@ -81,17 +112,36 @@ if __name__ == '__main__':
     idx0 = np.nonzero(np.equal(test_data.pop('t0'), 0))[1]
     print(len(idx0))
 
-    N = 76
-    Time = np.linspace(0, 1.5, num=N)
+    N = 151
+    Time = np.linspace(0, 3, num=N)
     dt = Time[1] - Time[0]
     Time = np.flip(Time)  # invert time to fit for network input setting
 
+    # A = test_data['A']
+    # A1 = A[:, :151]
+    # t1 = t[:, :151]
+    # X1 = X[:, :151]
+    # d1 = X[0, :151][-1]  # 55
+    # v1 = X[1, :151][-1]
+    # d2 = X[2, :151][-1]
+    # v2 = X[3, :151][-1]
+    # X_nn = np.vstack((d1, v1, d2, v2))
+    # t_nn = np.array([[0.0]])  # 1.9
+    # y1, y2, lam11_1, lam11_2, lam12_1, lam12_2, lam21_1, lam21_2, \
+    # lam22_1, lam22_2, u1, u2 = value_function(X_nn, t_nn, model)
+
     V1 = np.zeros((len(idx0), N))
     V2 = np.zeros((len(idx0), N))
-    A11 = np.zeros((len(idx0), N))
-    A12 = np.zeros((len(idx0), N))
-    A21 = np.zeros((len(idx0), N))
-    A22 = np.zeros((len(idx0), N))
+    A11_1 = np.zeros((len(idx0), N))
+    A11_2 = np.zeros((len(idx0), N))
+    A12_1 = np.zeros((len(idx0), N))
+    A12_2 = np.zeros((len(idx0), N))
+    A21_1 = np.zeros((len(idx0), N))
+    A21_2 = np.zeros((len(idx0), N))
+    A22_1 = np.zeros((len(idx0), N))
+    A22_2 = np.zeros((len(idx0), N))
+    U1 = np.zeros((len(idx0), N))
+    U2 = np.zeros((len(idx0), N))
 
     start_time = time.time()
 
@@ -105,13 +155,20 @@ if __name__ == '__main__':
                 v2 = X[3, idx0[i - 1]:][j - 1]
                 X_nn = np.vstack((d1, v1, d2, v2))
                 t_nn = np.array([[Time[j - 1]]])
-                y1, y2, lam11, lam12, lam21, lam22 = value_function(X_nn, t_nn, model)
+                y1, y2, lam11_1, lam11_2, lam12_1, lam12_2, lam21_1, lam21_2, \
+                lam22_1, lam22_2, u1, u2 = value_function(X_nn, t_nn, model)
                 V1[i - 1][j - 1] = y1
                 V2[i - 1][j - 1] = y2
-                A11[i - 1][j - 1] = lam11
-                A12[i - 1][j - 1] = lam12
-                A21[i - 1][j - 1] = lam21
-                A22[i - 1][j - 1] = lam22
+                A11_1[i - 1][j - 1] = lam11_1
+                A11_2[i - 1][j - 1] = lam11_2
+                A12_1[i - 1][j - 1] = lam12_1
+                A12_2[i - 1][j - 1] = lam12_2
+                A21_1[i - 1][j - 1] = lam21_1
+                A21_2[i - 1][j - 1] = lam21_2
+                A22_1[i - 1][j - 1] = lam22_1
+                A22_2[i - 1][j - 1] = lam22_2
+                U1[i - 1][j - 1] = u1
+                U2[i - 1][j - 1] = u2
 
         else:
             for j in range(1, N + 1):
@@ -121,13 +178,20 @@ if __name__ == '__main__':
                 v2 = X[3, idx0[i - 1]: idx0[i]][j - 1]
                 X_nn = np.vstack((d1, v1, d2, v2))
                 t_nn = np.array([[Time[j - 1]]])
-                y1, y2, lam11, lam12, lam21, lam22 = value_function(X_nn, t_nn, model)
+                y1, y2, lam11_1, lam11_2, lam12_1, lam12_2, lam21_1, lam21_2, \
+                lam22_1, lam22_2, u1, u2 = value_function(X_nn, t_nn, model)
                 V1[i - 1][j - 1] = y1
                 V2[i - 1][j - 1] = y2
-                A11[i - 1][j - 1] = lam11
-                A12[i - 1][j - 1] = lam12
-                A21[i - 1][j - 1] = lam21
-                A22[i - 1][j - 1] = lam22
+                A11_1[i - 1][j - 1] = lam11_1
+                A11_2[i - 1][j - 1] = lam11_2
+                A12_1[i - 1][j - 1] = lam12_1
+                A12_2[i - 1][j - 1] = lam12_2
+                A21_1[i - 1][j - 1] = lam21_1
+                A21_2[i - 1][j - 1] = lam21_2
+                A22_1[i - 1][j - 1] = lam22_1
+                A22_2[i - 1][j - 1] = lam22_2
+                U1[i - 1][j - 1] = u1
+                U2[i - 1][j - 1] = u2
 
         print(i)
 
@@ -138,23 +202,36 @@ if __name__ == '__main__':
 
     V1 = V1.flatten()
     V2 = V2.flatten()
-    A11 = A11.flatten()
-    A12 = A12.flatten()
-    A21 = A21.flatten()
-    A22 = A22.flatten()
+    A11_1 = A11_1.flatten()
+    A11_2 = A11_2.flatten()
+    A12_1 = A12_1.flatten()
+    A12_2 = A12_2.flatten()
+    A21_1 = A21_1.flatten()
+    A21_2 = A21_2.flatten()
+    A22_1 = A22_1.flatten()
+    A22_2 = A22_2.flatten()
+    U1 = U1.flatten()
+    U2 = U2.flatten()
 
     X_OUT = X
     V_OUT = np.vstack((V1, V2))
     t_OUT = t
+    A_OUT = np.vstack((A11_1, A11_2, A12_1, A12_2,
+                       A21_1, A21_2, A22_1, A22_2))
+    U_OUT = np.vstack((U1, U2))
 
     data = {'X': X_OUT,
             't': t_OUT,
             'V': V_OUT,
-            'A1': np.vstack((A11, A12)),
-            'A2': np.vstack((A21, A22))}
+            'A': A_OUT,
+            'U': U_OUT}
 
     save_data = input('Save data? Enter 0 for no, 1 for yes:')
     if save_data:
-        save_path = 'value_generation.mat'
+        # save_path = 'value_generation_HJI_sine_' + str(Num) + '.mat'
+        # save_path = 'value_generation_HJI_tanh_trainable_supervised_pretrain.mat'
+        # save_path = 'value_generation_supervised_' + str(N_neurons) + '.mat'
+        save_path = 'value_generation_final_' + str(N_neurons) + '.mat'
+        # save_path = 'value_generation_50000_' + str(N_neurons) + '.mat'
         scio.savemat(save_path, data)
 

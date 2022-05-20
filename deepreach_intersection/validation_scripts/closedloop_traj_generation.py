@@ -11,9 +11,9 @@ import scipy.io as scio
 
 def value_action(X, t, model, model_type):
     # normalize the state for agent 1, agent 2
-    d1 = 2.0 * (X[0, :] - 15) / (60 - 15) - 1.
+    d1 = 2.0 * (X[0, :] - 15) / (105 - 15) - 1.
     v1 = 2.0 * (X[1, :] - 15) / (32 - 15) - 1.
-    d2 = 2.0 * (X[2, :] - 15) / (60 - 15) - 1.
+    d2 = 2.0 * (X[2, :] - 15) / (105 - 15) - 1.
     v2 = 2.0 * (X[3, :] - 15) / (32 - 15) - 1.
     X = np.vstack((d1, v1, d2, v2))
 
@@ -39,15 +39,19 @@ def value_action(X, t, model, model_type):
     dvdx_1 = dv_1[..., 0, 1:].squeeze().reshape(1, dv_1.shape[-1] - 1)
 
     # unnormalize the costate for agent 1, consider V = exp(u)
-    lam11_1 = dvdx_1[:, :1] / ((60 - 15) / 2) / y1    # lambda_11
-    lam11_2 = dvdx_1[:, 1:2] / ((32 - 15) / 2) / y1   # lambda_11
+    lam11_1 = dvdx_1[:, :1] / ((105 - 15) / 2)  # lambda_11
+    lam11_2 = dvdx_1[:, 1:2] / ((32 - 15) / 2)  # lambda_11
+    lam12_1 = dvdx_1[:, 2:3] / ((105 - 15) / 2)  # lambda_12
+    lam12_2 = dvdx_1[:, 3:] / ((32 - 15) / 2)  # lambda_12
 
     # agent 2: partial gradient of V w.r.t. state
     dvdx_2 = dv_2[..., 0, 1:].squeeze().reshape(1, dv_2.shape[-1] - 1)
 
     # unnormalize the costate for agent 2, consider V = exp(u)
-    lam22_1 = dvdx_2[:, :1] / ((60 - 15) / 2) / y2    # lambda_22
-    lam22_2 = dvdx_2[:, 1:2] / ((32 - 15) / 2) / y2   # lambda_22
+    lam21_1 = dvdx_2[:, 2:3] / ((105 - 15) / 2)  # lambda_21
+    lam21_2 = dvdx_2[:, 3:] / ((32 - 15) / 2)  # lambda_21
+    lam22_1 = dvdx_2[:, :1] / ((105 - 15) / 2)  # lambda_22
+    lam22_2 = dvdx_2[:, 1:2] / ((32 - 15) / 2)  # lambda_22
 
     max_acc = torch.tensor([10.], dtype=torch.float32).cuda()
     min_acc = torch.tensor([-5.], dtype=torch.float32).cuda()
@@ -76,31 +80,38 @@ def value_action(X, t, model, model_type):
         U2[torch.where(U2 > 0)] = max_acc
         U2[torch.where(U2 < 0)] = min_acc
 
-    return U1, U2
+    return U1, U2, y1, y2
 
 def dynamic(X_nn, dt, action):
     u1, u2 = action
     v1 = X_nn[1, :] + u1 * dt
     v2 = X_nn[3, :] + u2 * dt
-    d1 = X_nn[0, :] + ((X_nn[1, :] + v1) / 2) * dt
-    d2 = X_nn[2, :] + ((X_nn[3, :] + v2) / 2) * dt
+    d1 = X_nn[0, :] + v1 * dt
+    d2 = X_nn[2, :] + v2 * dt
 
     return d1, v1, d2, v2
 
 if __name__ == '__main__':
 
     logging_root = './logs'
+    N_neurons = 64
+
+    policy = ['a_a', 'a_na', 'na_a', 'na_na']
+    N_choice = 3
 
     # Setting to plot
-    ckpt_path = './model_final.pth'
-    activation = 'relu'
+    # ckpt_path = './model_supervised_' + str(N_neurons) + '.pth'
+    # ckpt_path = './model_final_' + str(N_neurons) + '.pth'
+    ckpt_path = './model_hybrid_' + str(policy[N_choice]) + '.pth'
+    # ckpt_path = './model_supervised_' + str(policy[N_choice]) + '.pth'
+    activation = 'tanh'
 
-    model_type = 'BRAT'
-    # model_type = 'HJI'
+    # model_type = 'BRAT'
+    model_type = 'HJI'
 
     # Initialize and load the model
     model = modules.SingleBVPNet(in_features=5, out_features=1, type=activation, mode='mlp',
-                                 final_layer_factor=1., hidden_features=32, num_hidden_layers=5)
+                                 final_layer_factor=1., hidden_features=64, num_hidden_layers=3)
     model.cuda()
     checkpoint = torch.load(ckpt_path)
     try:
@@ -110,7 +121,9 @@ if __name__ == '__main__':
     model.load_state_dict(model_weights)
     model.eval()
 
-    test_data = scio.loadmat('data_test_a_a_18_18_cut.mat')
+    # test_data = scio.loadmat('data_test_a_a_18_18_inter.mat')
+    path = 'data_test_' + str(policy[N_choice]) + '_no collision_inter.mat'
+    test_data = scio.loadmat(path)
 
     t = test_data['t']
     X = test_data['X']
@@ -124,7 +137,8 @@ if __name__ == '__main__':
 
     X0 = X0.T
 
-    Time = np.linspace(0, 1.5, num=76)
+    N = 151
+    Time = np.linspace(0, 3, num=N)
     dt = Time[1] - Time[0]
     Time = np.flip(Time)  # invert time to fit for network input setting
 
@@ -134,6 +148,8 @@ if __name__ == '__main__':
     d2 = np.zeros((len(idx0), Time.shape[0]))
     v2 = np.zeros((len(idx0), Time.shape[0]))
     u2 = np.zeros((len(idx0), Time.shape[0]))
+    V1 = np.zeros((len(idx0), Time.shape[0]))
+    V2 = np.zeros((len(idx0), Time.shape[0]))
 
     for n in range(len(idx0)):
         d1[n][0] = X0[0, n]
@@ -150,7 +166,7 @@ if __name__ == '__main__':
         for j in range(1, Time.shape[0] + 1):
             X_nn = np.array([[d1[i][j - 1]], [v1[i][j - 1]], [d2[i][j - 1]], [v2[i][j - 1]]])
             t_nn = np.array([[Time[j - 1]]])
-            u1[i][j - 1], u2[i][j - 1] = value_action(X_nn, t_nn, model, model_type)
+            u1[i][j - 1], u2[i][j - 1], V1[i][j-1], V2[i][j-1] = value_action(X_nn, t_nn, model, model_type)
             if j == Time.shape[0]:
                 break
             else:
@@ -170,21 +186,23 @@ if __name__ == '__main__':
     v2 = v2.flatten()
     u1 = u1.flatten()
     u2 = u2.flatten()
+    V1 = V1.flatten()
+    V2 = V2.flatten()
 
     X_OUT = np.vstack((d1, v1, d2, v2))
     U_OUT = np.vstack((u1, u2))
-    time = np.array([np.linspace(0, 1.5, num=76)])
-    t_OUT = np.empty((1, 0))
-
-    for _ in range(len(idx0)):
-        t_OUT = np.hstack((t_OUT, time))
+    t_OUT = t
+    V_OUT = np.vstack((V1, V2))
 
     data = {'X': X_OUT,
             't': t_OUT,
-            'U': U_OUT}
+            'U': U_OUT,
+            'V': V_OUT}
 
     save_data = input('Save data? Enter 0 for no, 1 for yes:')
     if save_data:
-        save_path = 'closedloop_traj.mat'
+        # save_path = 'closedloop_traj_hybrid.mat'
+        save_path = 'closedloop_traj_hybrid_' + str(policy[N_choice]) + '.mat'
+        # save_path = 'closedloop_traj_supervised_' + str(policy[N_choice]) + '.mat'
         scio.savemat(save_path, data)
 
