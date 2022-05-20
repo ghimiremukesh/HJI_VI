@@ -208,7 +208,7 @@ def initialize_intersection_HJI_a(dataset, minWith):
         dirichlet = torch.cat((dirichlet_1, dirichlet_2), dim=0)
 
         # A factor of (2e5, 100) to make loss roughly equal
-        return {'dirichlet': torch.abs(dirichlet).sum() * batch_size / 2e5,
+        return {'dirichlet': torch.abs(dirichlet).sum() * batch_size / 2e7,
                 'diff_constraint_hom': torch.abs(diff_constraint_hom).sum() / 100}
 
     return intersection_hji
@@ -418,7 +418,7 @@ def initialize_intersection_HJI_na(dataset, minWith):
         dirichlet = torch.cat((dirichlet_1, dirichlet_2), dim=0)
 
         # A factor of (2e5, 100) to make loss roughly equal
-        return {'dirichlet': torch.abs(dirichlet).sum() * batch_size / 2e5,
+        return {'dirichlet': torch.abs(dirichlet).sum() * batch_size / 2e7,
                 'diff_constraint_hom': torch.abs(diff_constraint_hom).sum() / 100}
 
     return intersection_hji

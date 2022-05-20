@@ -50,3 +50,4 @@ hscc-zonotope-viability.pdf
 *.vrb
 *.xdy
 *.tdo
+experiments_scripts/logs/
