@@ -109,7 +109,7 @@ class IntersectionHJI(Dataset):
         self.numpoints = numpoints
         self.num_states = 4 # 4 (physical states) + 2 (belief states)
         self.belief_dim = 1 # add to the init after
-        self.prior = 0.5 # set uniform prior over belief \in [a, na] for agent -i
+        self.prior = 0.5
         self.tMax = tMax
         self.tMin = tMin
 
@@ -146,8 +146,8 @@ class IntersectionHJI(Dataset):
             # beta_2 = torch.ones(self.numpoints, 1) * self.prior  # agent 2's belief of agent 1
             # coords_1 = torch.cat((time, coords_1, beta_1), dim=1)
             # coords_2 = torch.cat((time, coords_2, beta_2), dim=1)
-            coords_1 = torch.cat((time, coords_1, belief_coords_1), dim=1)
-            coords_2 = torch.cat((time, coords_2, belief_coords_2), dim=1)
+            coords_1 = torch.cat((time, coords_1, belief_coords_1, belief_coords_2), dim=1)
+            coords_2 = torch.cat((time, coords_2, belief_coords_2, belief_coords_1), dim=1)
 
         else:
             # slowly grow time values from start time
@@ -155,8 +155,8 @@ class IntersectionHJI(Dataset):
             time = self.tMin + torch.zeros(self.numpoints, 1).uniform_(0, (self.tMax - self.tMin) * (
                     self.counter / self.full_count))
 
-            coords_1 = torch.cat((time, coords_1, belief_coords_1), dim=1)
-            coords_2 = torch.cat((time, coords_2, belief_coords_2), dim=1)
+            coords_1 = torch.cat((time, coords_1, belief_coords_1, belief_coords_2), dim=1)
+            coords_2 = torch.cat((time, coords_2, belief_coords_2, belief_coords_1), dim=1)
 
             # make sure we always have training samples at the initial time
             coords_1[-self.N_src_samples:, 0] = start_time

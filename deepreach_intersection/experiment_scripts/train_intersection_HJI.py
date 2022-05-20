@@ -75,22 +75,28 @@ dataset = dataio.IntersectionHJI(numpoints=10000,
 
 dataloader = DataLoader(dataset, shuffle=True, batch_size=opt.batch_size, pin_memory=True, num_workers=0)
 
-model = modules.SingleBVPNet(in_features=6, out_features=1, type=opt.model, mode=opt.mode,
+model_a = modules.SingleBVPNet(in_features=7, out_features=1, type=opt.model, mode=opt.mode,
                              final_layer_factor=1., hidden_features=opt.num_nl, num_hidden_layers=opt.num_hl)
 
-model.cuda()
+model_na = modules.SingleBVPNet(in_features=7, out_features=1, type=opt.model, mode=opt.mode,
+                             final_layer_factor=1., hidden_features=opt.num_nl, num_hidden_layers=opt.num_hl)
+
+model_a.cuda()
+model_na.cuda()
 
 # Define the loss
 '''
 loss definition for HJI
 '''
-loss_fn = loss_functions.initialize_intersection_HJI(dataset, opt.minWith)
+loss_fn_a = loss_functions.initialize_intersection_HJI_a(dataset, opt.minWith)
+loss_fn_na = loss_functions.initialize_intersection_HJI_na(dataset, opt.minWith)
 
-root_path = os.path.join(opt.logging_root, 'incomplete_info_try/')
+root_path_a = os.path.join(opt.logging_root, 'incomplete_info_try/a')
+root_path_na = os.path.join(opt.logging_root, 'incomplete_info_try/na')
 
-training.train(model=model, train_dataloader=dataloader, epochs=opt.num_epochs, lr=opt.lr,
+training.train(model_a=model_a, model_na=model_na, train_dataloader=dataloader, epochs=opt.num_epochs, lr=opt.lr,
                steps_til_summary=opt.steps_til_summary, epochs_til_checkpoint=opt.epochs_til_ckpt,
-               model_dir=root_path, loss_fn=loss_fn, clip_grad=opt.clip_grad,
+               model_dir_a=root_path_a, model_dir_na=root_path_na, loss_fn_a=loss_fn_a, loss_fn_na=loss_fn_na, clip_grad=opt.clip_grad,
                use_lbfgs=opt.use_lbfgs, validation_fn=None, start_epoch=opt.checkpoint_toload)
 
 
