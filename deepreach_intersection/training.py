@@ -185,9 +185,9 @@ def train(model_a, model_na, train_dataloader, epochs, lr, steps_til_summary, ep
 
                 if not use_lbfgs:
                     optim_a.zero_grad()
-                    train_loss_a.backward()
+                    train_loss_a.backward(retain_graph=True)
                     optim_na.zero_grad()
-                    train_loss_na.backward()
+                    train_loss_na.backward(retain_graph=True)
 
                     if clip_grad:
                         if isinstance(clip_grad, bool):

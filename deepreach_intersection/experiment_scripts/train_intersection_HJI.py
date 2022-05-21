@@ -91,8 +91,8 @@ loss definition for HJI
 loss_fn_a = loss_functions.initialize_intersection_HJI_a(dataset, opt.minWith)
 loss_fn_na = loss_functions.initialize_intersection_HJI_na(dataset, opt.minWith)
 
-root_path_a = os.path.join(opt.logging_root, 'incomplete_info_try/a')
-root_path_na = os.path.join(opt.logging_root, 'incomplete_info_try/na')
+root_path_a = os.path.join(opt.logging_root, 'incomplete_info_try_2/a')
+root_path_na = os.path.join(opt.logging_root, 'incomplete_info_try_2/na')
 
 training.train(model_a=model_a, model_na=model_na, train_dataloader=dataloader, epochs=opt.num_epochs, lr=opt.lr,
                steps_til_summary=opt.steps_til_summary, epochs_til_checkpoint=opt.epochs_til_ckpt,
