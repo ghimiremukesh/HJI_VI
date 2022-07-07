@@ -35,7 +35,7 @@ def initialize_soccer_hji(dataset):
 
 
         # H = lambda^T * (-f) + L because we invert the time
-        u = dataset.uMax * torch.sign(lam_2)
+        u = dataset.uMax * -1* torch.sign(lam_2)
         d = dataset.dMax * torch.sign(lam_5)
 
         v1 = x[:, :, 2]
