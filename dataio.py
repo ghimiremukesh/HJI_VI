@@ -8,7 +8,7 @@ import math
 
 
 class SoccerHJI(Dataset):
-    def __init__(self, numpoints, theta, velocity=0, u_max=0.1, d_max=0.05, tMin=0, tMax=1, counter_start=0,
+    def __init__(self, numpoints, theta, velocity=0, u_max=0.5, d_max=0.3, tMin=0, tMax=1, counter_start=0,
                  counter_end=100e3, pretrain=False, pretrain_iters=2000, num_src_samples=1000, seed=0):
         super().__init__()
         torch.manual_seed(0)

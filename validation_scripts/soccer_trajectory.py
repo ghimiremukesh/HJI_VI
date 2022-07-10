@@ -18,8 +18,8 @@ def value_action(X_nn, t_nn, model):
     v2 = X_nn[3]
     p = X_nn[4]
 
-    uMax = 0.1
-    dMax = 0.05
+    uMax = 0.5
+    dMax = 0.3
 
 
     X = np.vstack((d1, v1, d2, v2, p))
@@ -47,7 +47,7 @@ def value_action(X_nn, t_nn, model):
     lam_6 = dvdx[:, :, 4:]
 
 
-    u = uMax * torch.sign(lam_2)
+    u = uMax  * -1 * torch.sign(lam_2)
     d = dMax * torch.sign(lam_5)
 
     return u, d, y
@@ -67,12 +67,12 @@ def dynamic(X_nn, dt, action):
 
 if __name__ == '__main__':
     logging_root = './logs'
-    ckpt_path = '../experiment_scripts/logs/soccer_hji_exp/checkpoints/model_final.pth'
+    ckpt_path = '../experiment_scripts/logs/soccer_hji_exp_increased_a/checkpoints/model_final.pth'
     activation = 'tanh'
 
     # Initialize and load the model
     model = modules.SingleBVPNet(in_features=6, out_features=1, type=activation, mode='mlp',
-                                 final_layer_factor=1., hidden_features=64, num_hidden_layers=3)
+                                 final_layer_factor=1., hidden_features=32, num_hidden_layers=3)
     model.cuda()
     checkpoint = torch.load(ckpt_path)
     try:
@@ -84,19 +84,19 @@ if __name__ == '__main__':
 
     num_physical = 4
     x0 = torch.zeros(1, num_physical).uniform_(-1, 1)
-    x0[:, 0] = 0.5 # put them in the center
-    x0[:, 2] = 0.5
+    x0[:, 0] = 0 # put them in the center
+    x0[:, 2] = 0
     x0[:, 1] = 0
     x0[:, 3] = 0
 
     p = torch.zeros(1, 1).uniform_(0, 1)
-    p = torch.Tensor([[0.]]) # force to be of type left
+    p = torch.Tensor([[1]]) # force type
     X0 = torch.cat((x0, p), dim=1)
 
-    N = 151
-    Time = np.linspace(0, 1, num=N)
+    N = 151*3
+    Time = np.linspace(0, 3, num=N)
     dt = Time[1] - Time[0]
-    Time = np.flip(Time)
+
 
     d1 = np.zeros((N,))
     v1 = np.zeros((N,))
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     V = np.zeros((N,))
 
 
-    theta = 1 # type right
+    theta = -1 # type right
 
     d1[0] = X0[:, 0]
     v1[0] = X0[:, 1]
@@ -133,6 +133,18 @@ if __name__ == '__main__':
     print('Total solution time: %1.1f' % (time_spend), 'sec')
     print()
 
-    plt.plot(d1, d2)
-    plt.plot(p)
-    print()
+    fig, ax = plt.subplots(nrows=5, ncols=1)
+    ax[0].plot(Time, d1)
+    ax[0].set_ylabel('Player 1 (attacker)')
+    ax[1].plot(Time, d2)
+    ax[1].set_ylabel('Player 2 (defender)')
+    ax[2].plot(Time, p)
+    ax[2].set_ylabel('Belief over attacker\'s type')
+    # plt.plot(p)
+    ax[3].plot(Time, u1)
+    ax[4].plot(Time, u2)
+    ax[4].set_xlabel('Time')
+
+    fig2, ax2= plt.subplots(1, 1)
+    ax2.plot(d1,d2)
+    plt.show()
