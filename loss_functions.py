@@ -29,7 +29,7 @@ def initialize_soccer_hji(dataset):
         lam_2 = dvdx[:, 1:2]
         lam_4 = dvdx[:, 2:3]
         lam_5 = dvdx[:, 3:4]
-        lam_6 = dvdx[:, 4:]
+        lam_6 = dvdx[:, 4:5]
 
 
 
@@ -44,7 +44,7 @@ def initialize_soccer_hji(dataset):
 
         # calculate hamiltonian, H = lambda^T * (-f) + L because we invert the time
         ham = -lam_1.squeeze() * v1.squeeze() - lam_2.squeeze() * u.squeeze()- \
-                lam_4.squeeze() * v2.squeeze() - lam_5.squeeze() * d.squeeze() - lam_6 * torch.sign(u.squeeze())
+                lam_4.squeeze() * v2.squeeze() - lam_5.squeeze() * d.squeeze() - lam_6.squeeze() * torch.sign(u.squeeze())
 
 
         # dirichlet_mask is the bool array. It evaluates whether y[dirichlet_mask] is boundary condition or not
@@ -52,15 +52,18 @@ def initialize_soccer_hji(dataset):
         if torch.all(dirichlet_mask):
             diff_constraint_hom = torch.Tensor([0])
         else:
-            diff_constraint_hom = dvdt + torch.minimum(torch.tensor([0]), ham)
+            # try HJI-VI
+            diff_constraint_hom = dvdt + ham
+            diff_constraint_hom = torch.max(diff_constraint_hom, (y-source_boundary_values).squeeze())
+            # diff_constraint_hom = dvdt + torch.minimum(torch.tensor([[0]]), ham)
 
         # boundary condition check
-        dirichlet = y[dirichlet_mask] -  source_boundary_values[dirichlet_mask]
+        dirichlet = y[dirichlet_mask] - source_boundary_values[dirichlet_mask]
 
 
         # A factor of (2e5, 100) to make loss roughly equal
         return {'dirichlet': torch.abs(dirichlet).sum(),  # 1e4
-                'diff_constraint_hom': torch.abs(diff_constraint_hom).sum()}
+                'diff_constraint_hom': torch.abs(diff_constraint_hom).sum() / 15e4}
 
     return soccer_hji
 
