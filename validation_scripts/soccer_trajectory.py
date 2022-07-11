@@ -11,7 +11,7 @@ import scipy.io as scio
 import matplotlib.pyplot as plt
 
 
-def value_action(X_nn, t_nn, model):
+def value_action(X_nn, t_nn, model, theta):
     d1 = X_nn[0]
     v1 = X_nn [1]
     d2 = X_nn[2]
@@ -26,6 +26,7 @@ def value_action(X_nn, t_nn, model):
     X = torch.tensor(X, dtype=torch.float32, requires_grad=True).T
     t = torch.tensor(t_nn, dtype=torch.float32, requires_grad=True)
     coords = torch.cat((t, X), dim=1)
+    coords = torch.cat((coords, theta), dim=1)
 
     model_in = {'coords': coords.cuda()}
     model_output = model(model_in)
@@ -44,7 +45,7 @@ def value_action(X_nn, t_nn, model):
     lam_2 = dvdx[:, :, 1:2]
     lam_4 = dvdx[:, :, 2:3]
     lam_5 = dvdx[:, :, 3:4]
-    lam_6 = dvdx[:, :, 4:]
+    lam_6 = dvdx[:, :, 4:5]
 
 
     u = uMax  * -1 * torch.sign(lam_2)
@@ -67,11 +68,13 @@ def dynamic(X_nn, dt, action):
 
 if __name__ == '__main__':
     logging_root = './logs'
-    ckpt_path = '../experiment_scripts/logs/soccer_hji_exp_increased_a/checkpoints/model_final.pth'
+    ckpt_path = '../experiment_scripts/logs/soccer_hji_vi/checkpoints/model_final.pth'
     activation = 'tanh'
 
+    theta = torch.Tensor([[1]]) # type L or R
+
     # Initialize and load the model
-    model = modules.SingleBVPNet(in_features=6, out_features=1, type=activation, mode='mlp',
+    model = modules.SingleBVPNet(in_features=7, out_features=1, type=activation, mode='mlp',
                                  final_layer_factor=1., hidden_features=32, num_hidden_layers=3)
     model.cuda()
     checkpoint = torch.load(ckpt_path)
@@ -92,9 +95,11 @@ if __name__ == '__main__':
     p = torch.zeros(1, 1).uniform_(0, 1)
     p = torch.Tensor([[1]]) # force type
     X0 = torch.cat((x0, p), dim=1)
+    X0 = torch.cat((X0, theta), dim=1)
 
     N = 151*3
     Time = np.linspace(0, 3, num=N)
+    Time = np.flip(Time)
     dt = Time[1] - Time[0]
 
 
@@ -108,7 +113,7 @@ if __name__ == '__main__':
     V = np.zeros((N,))
 
 
-    theta = -1 # type right
+
 
     d1[0] = X0[:, 0]
     v1[0] = X0[:, 1]
@@ -121,7 +126,7 @@ if __name__ == '__main__':
     for j in range(1, Time.shape[0] + 1):
         X_nn = np.array([[d1[j - 1]], [v1[j - 1]], [d2[j - 1]], [v2[j - 1]], [p[j-1]]])
         t_nn = np.array([[Time[j - 1]]])
-        u1[j - 1], u2[j - 1], V[j - 1] = value_action(X_nn, t_nn, model)
+        u1[j - 1], u2[j - 1], V[j - 1] = value_action(X_nn, t_nn, model, theta)
         if j == Time.shape[0]:
             break
         else:
@@ -132,17 +137,19 @@ if __name__ == '__main__':
     time_spend = time.time() - start_time
     print('Total solution time: %1.1f' % (time_spend), 'sec')
     print()
-
+    Time = np.flip(Time)
     fig, ax = plt.subplots(nrows=5, ncols=1)
     ax[0].plot(Time, d1)
-    ax[0].set_ylabel('Player 1 (attacker)')
+    ax[0].set_ylabel('Attacker')
     ax[1].plot(Time, d2)
-    ax[1].set_ylabel('Player 2 (defender)')
+    ax[1].set_ylabel('Defender')
     ax[2].plot(Time, p)
-    ax[2].set_ylabel('Belief over attacker\'s type')
+    ax[2].set_ylabel('Belief')
     # plt.plot(p)
     ax[3].plot(Time, u1)
+    ax[3].set_ylabel('$u_A$')
     ax[4].plot(Time, u2)
+    ax[4].set_ylabel('$u_D$')
     ax[4].set_xlabel('Time')
 
     fig2, ax2= plt.subplots(1, 1)
