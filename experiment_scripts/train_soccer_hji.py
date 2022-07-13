@@ -10,7 +10,9 @@ import dataio, utils, training, loss_functions, modules
 
 from torch.utils.data import DataLoader
 import configargparse
+import torch
 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 p = configargparse.ArgumentParser()
 p.add('-c', '--config_filepath', required=False, is_config_file=True, help='Path to config file.')
@@ -81,11 +83,11 @@ dataloader = DataLoader(dataset, shuffle=True, batch_size=opt.batch_size, pin_me
 model = modules.SingleBVPNet(in_features=7, out_features=1, type=opt.model, mode=opt.mode,
                              final_layer_factor=1., hidden_features=opt.num_nl, num_hidden_layers=opt.num_hl)
 
-model.cuda()
+model.to(device)
 
 loss_fn = loss_functions.initialize_soccer_hji(dataset)
 
-root_path = os.path.join(opt.logging_root, 'soccer_hji_vi/')
+root_path = os.path.join(opt.logging_root, 'soccer_hji/')
 
 training.train(model=model, train_dataloader=dataloader, epochs=opt.num_epochs, lr=opt.lr,
                steps_til_summary=opt.steps_til_summary,epochs_til_checkpoint=opt.epochs_til_ckpt, model_dir=root_path,

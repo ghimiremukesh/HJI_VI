@@ -10,6 +10,7 @@ import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 def value_action(X_nn, t_nn, model, theta):
     d1 = X_nn[0]
@@ -28,7 +29,7 @@ def value_action(X_nn, t_nn, model, theta):
     coords = torch.cat((t, X), dim=1)
     coords = torch.cat((coords, theta), dim=1)
 
-    model_in = {'coords': coords.cuda()}
+    model_in = {'coords': coords.to(device)}
     model_output = model(model_in)
 
     x = model_output['model_in']
@@ -41,15 +42,29 @@ def value_action(X_nn, t_nn, model, theta):
     dvdx = jac[..., 0, 1:]
 
     # unnormalize the costate for agent 1
-    lam_1 = dvdx[:, :,  :1]
-    lam_2 = dvdx[:, :, 1:2]
-    lam_4 = dvdx[:, :, 2:3]
-    lam_5 = dvdx[:, :, 3:4]
-    lam_6 = dvdx[:, :, 4:5]
+    lam_1 = dvdx[:, :,  :1].detach()
+    lam_2 = dvdx[:, :, 1:2].detach()
+    lam_4 = dvdx[:, :, 2:3].detach()
+    lam_5 = dvdx[:, :, 3:4].detach()
+    lam_6 = dvdx[:, :, 4:5].detach()
 
+    u_c = torch.tensor([-0.5, 0.5])
+    d_c = torch.tensor([-0.3, 0.3])
+    H = torch.zeros(2, 2)
 
-    u = uMax  * -1 * torch.sign(lam_2)
-    d = dMax * torch.sign(lam_5)
+    for i in range(len(u_c)):
+        for j in range(len(d_c)):
+            H[i, j] = -lam_1.squeeze() * v1.squeeze() - lam_2.squeeze() * u_c[i].squeeze() - \
+                         lam_4.squeeze() * v2.squeeze() - lam_5.squeeze() * d_c[j].squeeze() - \
+                         lam_6.squeeze() * torch.sign(u_c[i].squeeze())
+
+    # H = H.flatten()
+    # H = H.reshape(len(H)//4, 4)
+
+    d_index = torch.argmax(H[:, :], dim=1)[1]
+    u_index = torch.argmin(H[:, d_index])
+    u = u_c[u_index]
+    d = d_c[d_index]
 
     return u, d, y
 
@@ -76,7 +91,7 @@ if __name__ == '__main__':
     # Initialize and load the model
     model = modules.SingleBVPNet(in_features=7, out_features=1, type=activation, mode='mlp',
                                  final_layer_factor=1., hidden_features=32, num_hidden_layers=3)
-    model.cuda()
+    model.to(device)
     checkpoint = torch.load(ckpt_path)
     try:
         model_weights = checkpoint['model']

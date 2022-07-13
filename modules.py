@@ -3,7 +3,7 @@ from torch import nn
 import numpy as np
 from collections import OrderedDict
 import math
-from torchmeta.modules import MetaModule
+# from torchmeta.modules import MetaModule
 
 
 class BatchLinear(nn.Linear):

@@ -1,7 +1,10 @@
 import torch
 import diff_operators
+import os
 
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
+device = device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 def initialize_soccer_hji(dataset):
     def soccer_hji(model_output, gt):
@@ -35,11 +38,35 @@ def initialize_soccer_hji(dataset):
 
 
         # H = lambda^T * (-f) + L because we invert the time
-        u = dataset.uMax * -1* torch.sign(lam_2)
-        d = dataset.dMax * torch.sign(lam_5)
+        # u = dataset.uMax * -1* torch.sign(lam_2)
+        # d = dataset.dMax * torch.sign(lam_5)
 
         v1 = x[:, :, 2]
         v2 = x[:, :, 4]
+
+        u_c = torch.tensor([-dataset.uMax, dataset.uMax])
+        d_c = torch.tensor([-dataset.dMax, dataset.dMax])
+        H = torch.zeros(dataset.numpoints, 2, 2)
+
+        for i in range(len(u_c)):
+            for j in range(len(d_c)):
+              H[:, i, j] = -lam_1.squeeze() * v1.squeeze() - lam_2.squeeze() * u_c[i].squeeze()- \
+                lam_4.squeeze() * v2.squeeze() - lam_5.squeeze() * d_c[j].squeeze() - \
+                           lam_6.squeeze() * torch.sign(u_c[i].squeeze())
+
+        # H = H.flatten()
+        # H = H.reshape(len(H)//4, 4)
+        u = torch.zeros(dataset.numpoints)
+        d = torch.zeros(dataset.numpoints)
+        for i in range(dataset.numpoints):
+            d_index = torch.argmax(H[i, :, :], dim=1)[1]
+            u_index = torch.argmin(H[i, :, d_index])
+            u[i] = u_c[u_index]
+            d[i] = d_c[d_index]
+
+        u = u.to(device)
+        d = d.to(device)
+
 
 
         # calculate hamiltonian, H = lambda^T * (-f) + L because we invert the time
@@ -53,9 +80,10 @@ def initialize_soccer_hji(dataset):
             diff_constraint_hom = torch.Tensor([0])
         else:
             # try HJI-VI
-            diff_constraint_hom = dvdt + ham
-            diff_constraint_hom = torch.max(diff_constraint_hom, (y-source_boundary_values).squeeze())
+            # diff_constraint_hom = dvdt + ham
+            # diff_constraint_hom = torch.max(diff_constraint_hom, (y-source_boundary_values).squeeze())
             # diff_constraint_hom = dvdt + torch.minimum(torch.tensor([[0]]), ham)
+            diff_constraint_hom = dvdt + torch.clamp(ham, max=0.0)
 
         # boundary condition check
         dirichlet = y[dirichlet_mask] - source_boundary_values[dirichlet_mask]
