@@ -19,8 +19,6 @@ def value_action(X_nn, t_nn, model, theta):
     v2 = X_nn[3]
     p = X_nn[4]
 
-    uMax = 0.5
-    dMax = 0.3
 
 
     X = np.vstack((d1, v1, d2, v2, p))
@@ -48,21 +46,21 @@ def value_action(X_nn, t_nn, model, theta):
     lam_5 = dvdx[:, :, 3:4].detach()
     lam_6 = dvdx[:, :, 4:5].detach()
 
-    u_c = torch.tensor([-0.5, 0.5])
-    d_c = torch.tensor([-0.3, 0.3])
+    u_c = torch.tensor([-0.3, 0.3])
+    d_c = torch.tensor([-0.1, 0.1])
     H = torch.zeros(2, 2)
 
     for i in range(len(u_c)):
         for j in range(len(d_c)):
             H[i, j] = -lam_1.squeeze() * v1.squeeze() - lam_2.squeeze() * u_c[i].squeeze() - \
                          lam_4.squeeze() * v2.squeeze() - lam_5.squeeze() * d_c[j].squeeze() - \
-                         lam_6.squeeze() * torch.sign(u_c[i].squeeze())
+                         lam_6.squeeze() * torch.sign(u_c[i].squeeze()) + theta * u_c[i]
 
     # H = H.flatten()
     # H = H.reshape(len(H)//4, 4)
-
-    d_index = torch.argmax(H[:, :], dim=1)[1]
-    u_index = torch.argmin(H[:, d_index])
+    H = -1 * H
+    u_index = torch.argmin(H[:, :], dim=1)[0]
+    d_index = torch.argmin(H[u_index, :])
     u = u_c[u_index]
     d = d_c[d_index]
 
@@ -83,10 +81,11 @@ def dynamic(X_nn, dt, action):
 
 if __name__ == '__main__':
     logging_root = './logs'
-    ckpt_path = '../experiment_scripts/logs/soccer_hji_vi/checkpoints/model_final.pth'
+    ckpt_path = '../experiment_scripts/logs/soccer_test_maximin/checkpoints/model_final.pth'
+    # ckpt_path = '../logs/soccer_hji_fix/checkpoints/model_final.pth'
     activation = 'tanh'
 
-    theta = torch.Tensor([[1]]) # type L or R
+    theta = torch.Tensor([[-1]]) # type L or R
 
     # Initialize and load the model
     model = modules.SingleBVPNet(in_features=7, out_features=1, type=activation, mode='mlp',
@@ -102,20 +101,21 @@ if __name__ == '__main__':
 
     num_physical = 4
     x0 = torch.zeros(1, num_physical).uniform_(-1, 1)
-    x0[:, 0] = 0 # put them in the center
+    x0[:, 0] = 0.5 # put them in the center
     x0[:, 2] = 0
     x0[:, 1] = 0
     x0[:, 3] = 0
 
     p = torch.zeros(1, 1).uniform_(0, 1)
-    p = torch.Tensor([[1]]) # force type
+    p = torch.Tensor([[0]]) # force type
     X0 = torch.cat((x0, p), dim=1)
     X0 = torch.cat((X0, theta), dim=1)
 
-    N = 151*3
-    Time = np.linspace(0, 3, num=N)
-    Time = np.flip(Time)
+    N = 151*1
+    Time = np.linspace(0, 1, num=N)
     dt = Time[1] - Time[0]
+    Time = np.flip(Time)
+
 
 
     d1 = np.zeros((N,))
@@ -169,4 +169,16 @@ if __name__ == '__main__':
 
     fig2, ax2= plt.subplots(1, 1)
     ax2.plot(d1,d2)
+
+    fig3, ax3 = plt.subplots(1, 1)
+    ax3.plot(Time, V, label="NN Value")
+    ax3.set_ylabel('Value')
+    ax3.set_xlabel('TIme')
+
+
+
+    val = -(d1 - d2) - (theta.detach().cpu().numpy() * u1).reshape(-1,)
+    print(val)
+    ax3.plot(Time, val, label="true value")
+    ax3.legend()
     plt.show()
