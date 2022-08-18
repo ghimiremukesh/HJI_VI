@@ -50,7 +50,7 @@ if baselineNANA is True:
     theta2 = 5
 if bvpAA is True:
     # data = scipy.io.loadmat('examples/' + system + '/data_BVP_a_a.mat')
-    data = scipy.io.loadmat('examples/' + system + '/data_train_a_a_upper.mat')
+    data = scipy.io.loadmat('examples/' + system + '/data_train_a_a_8_large.mat')
     index = 2
     title = 'BVP $\Theta^{*}=(a,a)$'
     special = 0
@@ -151,8 +151,17 @@ co_state = data['A']
 
 data.update({'t0': data['t']})
 idx0 = np.nonzero(np.equal(data.pop('t0'), 0.))[1]
-X1 = X[0, idx0]
-X2 = X[2, idx0]
+X1 = X[0:4, idx0]
+X2 = X[4:8, idx0]
+
+dx1 = X1[0, :]
+dy1 = X1[1, :]
+dx2 = X2[0, :]
+dy2 = X2[1, :]
+
+dist = np.sqrt((dy2 - dx1)**2 + (dx2 - dy1)**2)
+
+
 
 fig, axs = plt.subplots(1, 1, figsize=(6, 6))
 
@@ -161,91 +170,69 @@ for n in range(1, len(idx0) + 1):
 
     if sym is False:
         if n == len(idx0):
-            x1 = X[0, idx0[n - 1]:]
-            x2 = X[index, idx0[n - 1]:]
+            # x1 = X[0, idx0[n - 1]:]
+            # x2 = X[index, idx0[n - 1]:]
+            X1 = X[0:4, idx0[n - 1]:]
+            X2 = X[4:8, idx0[n - 1]:]
+
+            dx1 = X1[0, :]
+            dy1 = X1[1, :]
+            dx2 = X2[0, :]
+            dy2 = X2[1, :]
+
+            dist = np.sqrt((dy2 - dx1) ** 2 + (dx2 - dy1) ** 2)
             V1 = V[0, idx0[n - 1]:]
             # V2 = V[1, idx0[n - 1]:]
-            axs.plot(x1, x2)
+
             # axs.plot(x1, x2, '-k')
             co_state1 = co_state[0, idx0[n - 1]:]
             co_state2 = co_state[6, idx0[n - 1]:]
             T = t[0, idx0[n - 1]:]
+            axs.plot(T, dist)
             # axs.plot(T, co_state1)
             # axs.plot(T, co_state2)
             # axs.plot(T, V1)
         else:
-            x1 = X[0, idx0[n - 1]: idx0[n]]
-            x2 = X[index, idx0[n - 1]: idx0[n]]
+            X1 = X[0:4, idx0[n - 1]: idx0[n]]
+            X2 = X[4:8, idx0[n - 1]: idx0[n]]
+
+            dx1 = X1[0, :]
+            dy1 = X1[1, :]
+            dx2 = X2[0, :]
+            dy2 = X2[1, :]
+
+            dist = np.sqrt((dy2 - dx1) ** 2 + (dx2 - dy1) ** 2)
             V1 = V[0, idx0[n - 1]: idx0[n]]
             # V2 = V[1, idx0[n - 1]: idx0[n]]
-            axs.plot(x1, x2)
+            # axs.plot(dist)
             # axs.plot(x1, x2, '-k')
             co_state1 = co_state[0, idx0[n - 1]: idx0[n]]
             co_state2 = co_state[6, idx0[n - 1]: idx0[n]]
             T = t[0, idx0[n - 1]: idx0[n]]
+            axs.plot(T, dist)
             # axs.plot(T, co_state1)
             # axs.plot(T, co_state2)
             # axs.plot(T, V1)
 
-    if sym is True:
-        x1 = X[0, idx0[n - 1]: idx0[n]]
-        x2 = X[index, idx0[n - 1]: idx0[n]]
-        # V1 = V[0, idx0[n - 1]: idx0[n]]
-        # V2 = V[1, idx0[n - 1]: idx0[n]]
-        if special == 1:
-            # Plot 1
-            axs.plot(x1, x2, '-k')
-            # Flip Data
-            tempx = x2
-            x2 = x1
-            x1 = tempx
-            tempV = V2
-            V2 = V1
-            V1 = tempV
-            # Plot 1
-            axs.plot(x1, x2, '-k')
-        else:
-            if x2[0] > x1[0]:
-                # Plot 1
-                axs.plot(x1, x2, '-k')
-                # Flip Data
-                tempx = x2
-                x2 = x1
-                x1 = tempx
-                tempV = V2
-                V2 = V1
-                V1 = tempV
-                # Plot 1
-                axs.plot(x1, x2, '-k')
-            elif x2[0] - x1[0] > -0.2:
-                axs.plot(x1, x2, '-k')
-                # Flip Data
-                tempx = x2
-                x2 = x1
-                x1 = tempx
-                tempV = V2
-                V2 = V1
-                V1 = tempV
-                # Plot 1
-                axs.plot(x1, x2, '-k')
+# train1 = patches.Rectangle((35 - theta1 * 0.75, 35 - theta2 * 0.75), 3 + theta1 * 0.75 + 0.75,
+#                             3 + theta2 * 0.75 + 0.75, linewidth=1, edgecolor='k', facecolor='none')
+# start1 = patches.Rectangle((15, 15), 5, 5, linewidth=0.5, edgecolor='k', facecolor='none')
+# intersection1 = patches.Rectangle((34.25, 34.25), 4.5, 4.5, linewidth=1, edgecolor='grey', facecolor='grey')
+# axs.add_patch(intersection1)
+# axs.add_patch(train1)
+# axs.add_patch(start1)
+# axs.set_xlim(15, 40)
+# axs.set_xlabel('d1')
+# axs.set_ylim(15, 40)
+# axs.set_ylabel('d2')
 
-train1 = patches.Rectangle((35 - theta1 * 0.75, 35 - theta2 * 0.75), 3 + theta1 * 0.75 + 0.75,
-                            3 + theta2 * 0.75 + 0.75, linewidth=1, edgecolor='k', facecolor='none')
-start1 = patches.Rectangle((15, 15), 5, 5, linewidth=0.5, edgecolor='k', facecolor='none')
-intersection1 = patches.Rectangle((34.25, 34.25), 4.5, 4.5, linewidth=1, edgecolor='grey', facecolor='grey')
-axs.add_patch(intersection1)
-axs.add_patch(train1)
-axs.add_patch(start1)
-axs.set_xlim(15, 40)
-axs.set_xlabel('d1')
-axs.set_ylim(15, 40)
-axs.set_ylabel('d2')
-
-p1 = [0, 35 - theta1 * 0.75]
-p2 = [0, 35 - theta2 * 0.75]
-axs.plot(p1, p2, '-r')
+# p1 = [0, 35 - theta1 * 0.75]
+# p2 = [0, 35 - theta2 * 0.75]
+# axs.plot(p1, p2, '-r')
 
 axs.set_title(title)
+axs.set_xlabel("time")
+axs.set_ylabel('distance between cars')
 
 # if theta1 == 1:
 #     car1_policy = 'a'
