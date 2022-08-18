@@ -27,7 +27,7 @@ class VisUtils:
         self.road_length = problem.R1 / 2.
         self.coordinate = 'coordinates.png'
 
-        load_path = 'examples/vehicle/data_train_a_a_8_new.mat'
+        load_path = 'examples/vehicle/data_train_a_a_8.mat'
         # load_path = 'examples/vehicle/data_E_a_a.mat'
         # load_path = 'examples/vehicle/data_NE_a_a.mat'
         # load_path = 'examples/vehicle/data_E_na_na.mat'
@@ -75,7 +75,7 @@ class VisUtils:
         self.coor_image = pg.image.load(self.asset_location + self.coordinate)
 
         # we can change the number to adjust the position of the road frame
-        self.origin = np.array([36, 36])  # 35, 35; 30, 30;
+        self.origin = np.array([35, 35])  # 35, 35; 30, 30; 36, 36
 
         # self.origin = np.array([0, 0])
 
@@ -183,8 +183,8 @@ class VisUtils:
 
     def draw_axes(self):
         # draw lanes based on environment
-        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((35 + self.car_width, -50)),
-                     self.c2p((35 + self.car_width, 100)), self.car_image[0].get_size()[0] * 4)
+        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((35, -50)),
+                     self.c2p((35, 100)), self.car_image[0].get_size()[0] * 4)
 
 
         # pg.draw.line(self.screen, LIGHT_GREY, self.c2p((35 + self.car_width / 2, -50)),
@@ -193,8 +193,8 @@ class VisUtils:
         # for uncontrolled intersection case, set self.car_image[1].get_size()[1]
         # for unprotected left turn, set self.car_image[1].get_size()[0]
 
-        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((100, 35 - self.car_width)),
-                     self.c2p((-50, 35 - self.car_width)), self.car_image[1].get_size()[1] * 4)
+        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((100, 35)),
+                     self.c2p((-50, 35)), self.car_image[1].get_size()[1] * 4)
 
 
         # pg.draw.line(self.screen, LIGHT_GREY, self.c2p((100, 35 - self.car_width / 2)),
@@ -232,8 +232,11 @@ class VisUtils:
         #                         bounds[0] - bounds[1])
 
     def draw_dashed_line1(self):
-        origin = self.c2p((35 + self.car_width, -50))
-        target = self.c2p((35 + self.car_width, 100))
+        # origin = self.c2p((35 + self.car_width, -50))
+        # target = self.c2p((35 + self.car_width, 100))
+
+        origin = self.c2p((35, -50))
+        target = self.c2p((35, 100))
         displacement = target - origin
         length = abs(displacement[1])
         slope = displacement / length
@@ -245,8 +248,11 @@ class VisUtils:
             pg.draw.line(self.screen, (0, 0, 0), start, end, 1)
 
     def draw_dashed_line2(self):
-        origin = self.c2p((100, 35 - self.car_width))
-        target = self.c2p((-50, 35 - self.car_width))
+        # origin = self.c2p((100, 35 - self.car_width))
+        # target = self.c2p((-50, 35 - self.car_width))
+
+        origin = self.c2p((100, 35))
+        target = self.c2p((-50, 35))
         displacement = target - origin
         length = abs(displacement[0])
         slope = displacement / length
