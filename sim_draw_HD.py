@@ -27,7 +27,7 @@ class VisUtils:
         self.road_length = problem.R1 / 2.
         self.coordinate = 'coordinates.png'
 
-        load_path = 'examples/vehicle/data_train_a_a_8_new.mat'
+        load_path = 'examples/vehicle/data_train_a_a_1.mat'
         # load_path = 'examples/vehicle/data_E_a_a.mat'
         # load_path = 'examples/vehicle/data_NE_a_a.mat'
         # load_path = 'examples/vehicle/data_E_na_na.mat'
@@ -75,7 +75,7 @@ class VisUtils:
         self.coor_image = pg.image.load(self.asset_location + self.coordinate)
 
         # we can change the number to adjust the position of the road frame
-        self.origin = np.array([36, 36])  # 35, 35; 30, 30;
+        self.origin = np.array([35, 35])  # 35, 35; 30, 30;
 
         # self.origin = np.array([0, 0])
 
@@ -86,6 +86,15 @@ class VisUtils:
         pg.display.flip()
         pg.display.update()
 
+    def blit_alpha(self, target, source, location, opacity):
+        x = location[0]
+        y = location[1]
+        temp = pg.Surface((source.get_width(), source.get_height())).convert()
+        temp.blit(target, (-x, -y))
+        temp.blit(source, (0, 0))
+        temp.set_alpha(opacity)
+        target.blit(temp, location)
+
     def draw_frame(self):
         '''state[t] = [s_x, s_y, v_x, v_y]_t'''
         '''state = [state_t, state_t+1, ...]'''
@@ -95,11 +104,15 @@ class VisUtils:
         steps = self.T.shape[0]  # 10/0.1 + 1 = 101
         # steps = self.T.shape[1]
 
+        self.screen.fill((255, 255, 255))
+        self.draw_axes()
+        self.draw_dashed_line1()
+        self.draw_dashed_line2()
         for k in range(steps - 1):
-            self.screen.fill((255, 255, 255))
-            self.draw_axes()
-            self.draw_dashed_line1()
-            self.draw_dashed_line2()
+            # self.screen.fill((255, 255, 255))
+            # self.draw_axes()
+            # self.draw_dashed_line1()
+            # self.draw_dashed_line2()
             # Draw Images
             n_agents = 2
             for i in range(n_agents):
@@ -124,8 +137,11 @@ class VisUtils:
                 '''transform pos'''
                 pixel_pos_car = self.c2p(pos)
                 size_car = self.car_image[i].get_size()
-                self.screen.blit(self.car_image[i],
-                                 (pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2))
+
+                # try with opacity
+                self.blit_alpha(self.screen, self.car_image[i].convert_alpha(), (pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2), 11*k)
+                # self.screen.blit(self.car_image[i].convert_alpha(),
+                #                  (pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2))
                 time.sleep(0.05)
                 # if self.sim.decision_type == "baseline":
                 #     time.sleep(0.05)
@@ -170,8 +186,8 @@ class VisUtils:
 
             # self.coordinate_image = self.screen.blit(self.coor_image, (screen_w - 800, screen_h - 50))
 
-            recording_path = 'image_recording/'
-            pg.image.save(self.screen, "%simg%03d.png" % (recording_path, k))
+            # recording_path = 'image_recording/'
+            # pg.image.save(self.screen, "%simg%03d.png" % (recording_path, k))
 
             "drawing the map of state distribution"
             # pg.draw.circle(self.screen, (255, 255, 255), self.c2p(self.origin), 10)  # surface,  color, (x, y),radius>=1
@@ -180,6 +196,9 @@ class VisUtils:
 
             pg.display.flip()
             pg.display.update()
+
+        recording_path = 'image_recording/'
+        pg.image.save(self.screen, "%simg%03d.png" % (recording_path, k))
 
     def draw_axes(self):
         # draw lanes based on environment
@@ -304,21 +323,21 @@ if __name__ == '__main__':
     vis = VisUtils()
     vis.draw_frame()
 
-    path = 'image_recording/'
-    import glob
-
-    image = glob.glob(path + "*.png")
-    # print(image)
-    # episode_step_count = len(image)
-    img_list = image  # [path + "img" + str(i).zfill(3) + ".png" for i in range(episode_step_count)]
-
-    import imageio
-
-    images = []
-    for filename in img_list:
-        images.append(imageio.imread(filename))
-    # tag = 'E_E' + '_' + 'theta1' + '=' + 'a' + '_' + 'theta2' + '=' + 'na' + '_' + 'time horizon' + '=' + str(config.t1)
-    tag = 'NE_E' + '_' + 'theta1' + '=' + 'a' + '_' + 'theta2' + '=' + 'na' + '_' + 'time horizon' + '=' + str(config.t1)
-    imageio.mimsave(path + 'movie_' + tag + '.gif', images, 'GIF', fps=5)
-    # Delete images
-    [os.remove(path + file) for file in os.listdir(path) if ".png" in file]
+    # path = 'image_recording/'
+    # import glob
+    #
+    # image = glob.glob(path + "*.png")
+    # # print(image)
+    # # episode_step_count = len(image)
+    # img_list = image[-1] # [path + "img" + str(i).zfill(3) + ".png" for i in range(episode_step_count)]
+    #
+    #
+    # import imageio
+    #
+    #
+    # # # tag = 'E_E' + '_' + 'theta1' + '=' + 'a' + '_' + 'theta2' + '=' + 'na' + '_' + 'time horizon' + '=' + str(config.t1)
+    # # tag = 'NE_E' + '_' + 'theta1' + '=' + 'a' + '_' + 'theta2' + '=' + 'na' + '_' + 'time horizon' + '=' + str(config.t1)
+    # imageio.imsave(path + 'final_ ', img_list)
+    # # imageio.mimsave(path + 'movie_' + tag + '.gif', images, 'GIF', fps=5)
+    # # # Delete images
+    # [os.remove(path + file) for file in os.listdir(path) if ".png" in file]
