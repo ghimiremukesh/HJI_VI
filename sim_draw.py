@@ -27,7 +27,7 @@ class VisUtils:
         # self.road_length = (problem.R1 + self.car_length) / 2.
         self.road_length = problem.R1 / 2.
 
-        load_path = 'examples/vehicle/data_train_a_a_8.mat'
+        load_path = 'examples/vehicle/data_train_a_a_8_large.mat'
         self.train_data = scipy.io.loadmat(load_path)
 
         # self.new_data = self.train_data
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     for filename in img_list:
         images.append(imageio.imread(filename))
     tag = 'theta1' + '=' + str(problem.theta1) + '_' + 'theta2' + '=' + str(problem.theta2) +  '_' +'time horizon' + '=' + str(config.t1)
-    imageio.mimsave(path + 'movie_' + tag + '.gif', images, 'GIF', fps=5)
+    imageio.mimsave(path + 'movie_' + tag + '.gif', images, 'GIF', fps=1)
     # Delete images
     [os.remove(path + file) for file in os.listdir(path) if ".png" in file]
 
