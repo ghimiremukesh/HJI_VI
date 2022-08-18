@@ -5,6 +5,7 @@ import scipy.io
 from matplotlib import cm
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap
+import math
 
 from examples.choose_problem import system, problem
 
@@ -14,6 +15,12 @@ bvpAA = True
 bvpANA = False
 bvpNAA = False
 bvpNANA = False
+
+def pointInRect(points):
+    for p in points:
+        if np.sqrt((p[0] - p[2]) ** 2 + (p[1] - p[3]) ** 2) <= 3 * np.sqrt(2):
+            return True
+    return False
 
 #________________________________________________________________________________________
 if bvpAA is True:
@@ -58,6 +65,11 @@ co_state = data['A']
 data.update({'t0': data['t']})
 idx0 = np.nonzero(np.equal(data.pop('t0'), 0.))[1]
 
+X0 = X[:, idx0]
+
+count = 0
+traj_list = []
+
 fig, axs = plt.subplots(1, 1, figsize=(7, 7))
 
 for n in range(1, len(idx0) + 1):
@@ -72,6 +84,12 @@ for n in range(1, len(idx0) + 1):
 
         dist = np.sqrt((dx2 - dx1) ** 2 + (dy2 - dy1) ** 2)
 
+        pairs = zip(dx1, dy1, dx2, dy2)
+        if pointInRect(pairs):
+            count += 1
+            print(n - 1)
+            traj_list.append(n - 1)
+
         T = t[0, idx0[n - 1]:]
         axs.plot(T, dist)
     else:
@@ -84,6 +102,12 @@ for n in range(1, len(idx0) + 1):
         dy2 = X2[1, :]
 
         dist = np.sqrt((dx2 - dx1) ** 2 + (dy2 - dy1) ** 2)
+
+        pairs = zip(dx1, dy1, dx2, dy2)
+        if pointInRect(pairs):
+            count += 1
+            print(n - 1)
+            traj_list.append(n - 1)
 
         T = t[0, idx0[n - 1]: idx0[n]]
         axs.plot(T, dist)
@@ -104,8 +128,19 @@ for n in range(1, len(idx0) + 1):
 # p2 = [0, 35 - theta2 * 0.75]
 # axs.plot(p1, p2, '-r')
 
+for i in range(len(traj_list)):
+    dx1 = X0[1, traj_list[i]]
+    dy1 = X0[0, traj_list[i]]
+    dx2 = X0[4, traj_list[i]]
+    dy2 = X0[5, traj_list[i]]
+    dist = np.sqrt((dx2 - dx1) ** 2 + (dy2 - dy1) ** 2)
+    axs.plot(dist, marker='o', color='red', markersize=5)
+
+plt.hlines(3 * math.sqrt(2), 0, 3, color="red", linestyle='--', linewidth=3)
+
 axs.set_title(title)
 axs.set_xlabel("time")
 axs.set_ylabel('distance between cars')
 
+print("Total Collision: %d" %count)
 plt.show()
