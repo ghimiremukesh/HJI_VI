@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from examples.problem_def_template import config_prototype, problem_prototype
+import math
 
 class config_NN (config_prototype):
     def __init__(self, N_states, time_dependent):
@@ -11,7 +12,7 @@ class config_NN (config_prototype):
                                         self.N_layers,
                                         self.N_neurons)
 
-        self.random_seeds = {'train': 7, 'generate': 8}
+        self.random_seeds = {'train': 7, 'generate': 18}
 
         self.ODE_solver = 'RK23'
         # Accuracy level of BVP data
@@ -35,7 +36,7 @@ class config_NN (config_prototype):
         self.plotdims = [0, 3]
 
         # Number of training trajectories
-        self.Ns = {'train': 1, 'val': 100, 'test': 1}
+        self.Ns = {'train': 50, 'val': 100, 'test': 1}
 
         ##### Options for training #####
         # Number of data points to use in first training rounds
@@ -79,20 +80,11 @@ class setup_problem(problem_prototype):
         # Initial condition bounds (different initial setting)
         # Currently, we give the initial position is [15m, 20m]
         # initial velocity is [18m/s, 25m/s]
-        self.X0_lb = np.array([[15.], [34.25], [-np.pi/180], [18.], [15.], [34.25], [-np.pi/180], [18.]])
-        self.X0_ub = np.array([[20.], [35.75], [np.pi/180], [25.], [20.], [35.75], [np.pi/180], [25.]])
+        # self.X0_lb = np.array([[15.], [34.25], [-np.pi/180], [18.], [15.], [34.25], [-np.pi/180], [18.]])
+        # self.X0_ub = np.array([[20.], [35.75], [np.pi/180], [25.], [20.], [35.75], [np.pi/180], [25.]])
 
-        # test 1
-        # self.X0_lb = np.array([[15.], [35.], [0.], [18.], [15.], [35.], [0.], [18.]])
-        # self.X0_ub = np.array([[20.], [35.], [0.], [25.], [20.], [35.], [0.], [25.]])
-
-        # test 2
-        # self.X0_lb = np.array([[15.], [34.25], [0.], [18.], [15.], [34.25], [0.], [18.]])
-        # self.X0_ub = np.array([[20.], [35.75], [0.], [25.], [20.], [35.75], [0.], [25.]])
-
-        # test 3
-        # self.X0_lb = np.array([[15.], [35.], [-np.pi/180], [18.], [15.], [35.], [-np.pi/180], [18.]])
-        # self.X0_ub = np.array([[20.], [35.], [np.pi/180], [25.], [20.], [35.], [np.pi/180], [25.]])
+        self.X0_lb = np.array([[15.], [32.75], [-np.pi/180], [18.], [12.], [35.75], [-np.pi/180], [18.]])
+        self.X0_ub = np.array([[20.], [34.25], [np.pi/180], [25.], [17.], [37.25], [np.pi/180], [25.]])
 
         self.beta = 10000   # 10000
         self.theta1 = 1  # [1, 5]
@@ -105,13 +97,20 @@ class setup_problem(problem_prototype):
         self.L1 = 3
         self.L2 = 3
 
-        # Length for each vehicle
+        # Width for each vehicle
         self.W1 = 1.5
         self.W2 = 1.5
+
+        # Width for Road
+        self.D1 = 3
+        self.D2 = 3
 
         # Road length setting
         self.R1 = 70  # 71 or 62, 73
         self.R2 = 70
+
+        # Threshold to compute the collision
+        self.threshold = 3 * math.sqrt(2)
 
     def U_star(self, X_aug):
         '''Control as a function of the costate.'''
@@ -138,8 +137,8 @@ class setup_problem(problem_prototype):
         A = X_aug[5 * self.N_states:6 * self.N_states]
         Omega2 = np.matmul(self.B1.T, A) / 2
 
-        max_acc = 0.01
-        min_acc = -0.01
+        max_acc = 1
+        min_acc = -1
         Omega1[np.where(Omega1 > max_acc)] = max_acc
         Omega1[np.where(Omega1 < min_acc)] = min_acc
         Omega2[np.where(Omega2 > max_acc)] = max_acc
@@ -187,6 +186,17 @@ class setup_problem(problem_prototype):
     # PMP equation for BVP
     def aug_dynamics(self, t, X_aug):
         '''Evaluation of the augmented dynamics at a vector of time instances'''
+        # Constrain for state, position x for agent 1 and position y for agent 2
+        # p1x_max = 38
+        # p1x_min = 32
+        # X_aug[:self.N_states][1][np.where(X_aug[:self.N_states][1] > p1x_max)] = p1x_max
+        # X_aug[:self.N_states][1][np.where(X_aug[:self.N_states][1] < p1x_min)] = p1x_min
+        #
+        # p2y_max = 38
+        # p2y_min = 32
+        # X_aug[self.N_states:2 * self.N_states][1][np.where(X_aug[self.N_states:2 * self.N_states][1] > p2y_max)] = p2y_max
+        # X_aug[self.N_states:2 * self.N_states][1][np.where(X_aug[self.N_states:2 * self.N_states][1] < p2y_min)] = p2y_min
+
         # Control as a function of the costate
         U1, U2 = self.U_star(X_aug)
         Omega1, Omega2 = self.Omega_star(X_aug)
@@ -209,28 +219,70 @@ class setup_problem(problem_prototype):
         A_22 = X_aug[5 * self.N_states:6 * self.N_states]
 
         # Sigmoid function: sigmoid(x1_in)*inverse_sigmoid(x1_out)*sigmoid(x2_in)*inverse_sigmoid(x2_out)
-        x1 = torch.tensor(X1[0], requires_grad=True, dtype=torch.float32)  # including x1,v1
-        x2 = torch.tensor(X2[0], requires_grad=True, dtype=torch.float32)  # including x1,v1
+        dx1 = torch.tensor(X1[0], requires_grad=True, dtype=torch.float32)
+        dy1 = torch.tensor(X1[1], requires_grad=True, dtype=torch.float32)
+        dx2 = torch.tensor(X2[0], requires_grad=True, dtype=torch.float32)
+        dy2 = torch.tensor(X2[1], requires_grad=True, dtype=torch.float32)
 
-        x1_in = (x1 - self.R1 / 2 + self.theta1 * self.W2 / 2) * 5  # 3
-        x1_out = -(x1 - self.R1 / 2 - self.W2 / 2 - self.L1) * 5
-        x2_in = (x2 - self.R2 / 2 + self.theta2 * self.W1 / 2) * 5
-        x2_out = -(x2 - self.R2 / 2 - self.W1 / 2 - self.L2) * 5
+        dist_diff = torch.sigmoid(-(torch.sqrt((dx2 - dy1) ** 2 + (dy2 - dx1) ** 2) - self.threshold) * 5)
 
-        Collision_F_x = self.beta * torch.sigmoid(x1_in) * torch.sigmoid(x1_out) * torch.sigmoid(x2_in) * torch.sigmoid(x2_out)
+        # x1_in = (x1 - self.R1 / 2) * 5  # 3
+        # x1_out = -(x1 - self.R1 / 2 - self.D2 - self.L1) * 5
+        # x2_in = (x2 - self.R2 / 2 + self.theta2 * self.D1) * 5
+        # x2_out = -(x2 - self.R2 / 2 - self.L2) * 5
+
+        # x1_in = (x1 - self.R1 / 2 + self.theta1 * self.W2) * 5  # 3
+        # x1_out = -(x1 - self.R1 / 2 - self.W2 - self.L1) * 5
+        # x2_in = (x2 - self.R2 / 2 + self.theta2 * self.W1) * 5
+        # x2_out = -(x2 - self.R2 / 2 - self.W1 - self.L2) * 5
+
+        # Collision_F_x = self.beta * torch.sigmoid(x1_in) * torch.sigmoid(x1_out) * torch.sigmoid(x2_in) * torch.sigmoid(x2_out)
+        #
+        # Collision_F_x_sum = torch.sum(Collision_F_x)
+        # Collision_F_x_sum.requires_grad_()
+        #
+        # dL1dx1 = torch.autograd.grad(Collision_F_x_sum, x1, create_graph=True)[0].detach().numpy()
+        # dL1dx2 = torch.autograd.grad(Collision_F_x_sum, x2, create_graph=True)[0].detach().numpy()
+        # dL2dx1 = torch.autograd.grad(Collision_F_x_sum, x1, create_graph=True)[0].detach().numpy()
+        # dL2dx2 = torch.autograd.grad(Collision_F_x_sum, x2, create_graph=True)[0].detach().numpy()
+
+        Collision_F_x = self.beta * dist_diff
 
         Collision_F_x_sum = torch.sum(Collision_F_x)
         Collision_F_x_sum.requires_grad_()
 
-        dL1dx1 = torch.autograd.grad(Collision_F_x_sum, x1, create_graph=True)[0].detach().numpy()
-        dL1dx2 = torch.autograd.grad(Collision_F_x_sum, x2, create_graph=True)[0].detach().numpy()
-        dL2dx1 = torch.autograd.grad(Collision_F_x_sum, x1, create_graph=True)[0].detach().numpy()
-        dL2dx2 = torch.autograd.grad(Collision_F_x_sum, x2, create_graph=True)[0].detach().numpy()
+        # reward for constraint to stay on the road
+        # x1_in = (dy1 - self.R1 / 2 + self.D2) * 5  # 3
+        # x1_out = -(dy1 - self.R1 / 2 - self.D2) * 5
+        # x2_in = (dy2 - self.R2 / 2 + self.D1) * 5
+        # x2_out = -(dy2 - self.R2 / 2 - self.D1) * 5
+        #
+        # Reward_F = 10000 * torch.sigmoid(x1_in) * torch.sigmoid(x1_out) * torch.sigmoid(x2_in) * torch.sigmoid(x2_out)
+        # Reward_F_sum = torch.sum(Reward_F)
+        # Reward_F_sum.requires_grad_()
 
-        dL1dy1 = np.zeros(dL1dx1.shape[0], dtype=np.int32)
-        dL1dy2 = np.zeros(dL1dx2.shape[0], dtype=np.int32)
-        dL2dy1 = np.zeros(dL2dx1.shape[0], dtype=np.int32)
-        dL2dy2 = np.zeros(dL2dx2.shape[0], dtype=np.int32)
+        # Reward_F_1 = 1000 * torch.sigmoid(x1_in) * torch.sigmoid(x1_out)
+        # Reward_F_2 = 1000 * torch.sigmoid(x2_in) * torch.sigmoid(x2_out)
+        #
+        # Reward_F_1_sum = torch.sum(Reward_F_1)
+        # Reward_F_1_sum.requires_grad_()
+        # Reward_F_2_sum = torch.sum(Reward_F_2)
+        # Reward_F_2_sum.requires_grad_()
+
+        dL1dx1 = torch.autograd.grad(Collision_F_x_sum, dx1, create_graph=True)[0].detach().numpy()
+        dL1dx2 = torch.autograd.grad(Collision_F_x_sum, dx2, create_graph=True)[0].detach().numpy()
+        dL2dx1 = torch.autograd.grad(Collision_F_x_sum, dx1, create_graph=True)[0].detach().numpy()
+        dL2dx2 = torch.autograd.grad(Collision_F_x_sum, dx2, create_graph=True)[0].detach().numpy()
+
+        # dL1dy1 = torch.autograd.grad(Collision_F_x_sum, dy1, create_graph=True)[0].detach().numpy() - torch.autograd.grad(Reward_F_sum, dy1, create_graph=True)[0].detach().numpy()
+        # dL1dy2 = torch.autograd.grad(Collision_F_x_sum, dy2, create_graph=True)[0].detach().numpy() - torch.autograd.grad(Reward_F_sum, dy2, create_graph=True)[0].detach().numpy()
+        # dL2dy1 = torch.autograd.grad(Collision_F_x_sum, dy1, create_graph=True)[0].detach().numpy() - torch.autograd.grad(Reward_F_sum, dy1, create_graph=True)[0].detach().numpy()
+        # dL2dy2 = torch.autograd.grad(Collision_F_x_sum, dy2, create_graph=True)[0].detach().numpy() - torch.autograd.grad(Reward_F_sum, dy2, create_graph=True)[0].detach().numpy()
+
+        dL1dy1 = torch.autograd.grad(Collision_F_x_sum, dy1, create_graph=True)[0].detach().numpy()
+        dL1dy2 = torch.autograd.grad(Collision_F_x_sum, dy2, create_graph=True)[0].detach().numpy()
+        dL2dy1 = torch.autograd.grad(Collision_F_x_sum, dy1, create_graph=True)[0].detach().numpy()
+        dL2dy2 = torch.autograd.grad(Collision_F_x_sum, dy2, create_graph=True)[0].detach().numpy()
 
         dL1dtheta1 = np.zeros(dL1dx1.shape[0], dtype=np.int32)
         dL1dtheta2 = np.zeros(dL1dx2.shape[0], dtype=np.int32)
@@ -287,5 +339,8 @@ class setup_problem(problem_prototype):
 
         L1 = U1 ** 2 + Collision_F_x.detach().numpy() + Omega1 ** 2
         L2 = U2 ** 2 + Collision_F_x.detach().numpy() + Omega2 ** 2
+
+        # L1 = U1 ** 2 + Collision_F_x.detach().numpy() + Omega1 ** 2 - Reward_F_sum.detach().numpy()
+        # L2 = U2 ** 2 + Collision_F_x.detach().numpy() + Omega2 ** 2 - Reward_F_sum.detach().numpy()
 
         return np.vstack((dXdt_1, dXdt_2, dAdt_11, dAdt_12, dAdt_21, dAdt_22, -L1, -L2))
