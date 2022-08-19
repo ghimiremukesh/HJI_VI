@@ -4,6 +4,7 @@ import time
 import scipy.io
 import os
 from examples.choose_problem_HD import system, problem, config
+import math
 
 LIGHT_GREY = (230, 230, 230)
 
@@ -27,7 +28,8 @@ class VisUtils:
         self.road_length = problem.R1 / 2.
         self.coordinate = 'coordinates.png'
 
-        load_path = 'examples/vehicle/data_train_a_a_1.mat'
+        # load_path = 'examples/vehicle/data_train_a_a_1.mat'
+        load_path = 'examples/vehicle/data_test_a_a_8.mat'
         # load_path = 'examples/vehicle/data_E_a_a.mat'
         # load_path = 'examples/vehicle/data_NE_a_a.mat'
         # load_path = 'examples/vehicle/data_E_na_na.mat'
@@ -70,7 +72,7 @@ class VisUtils:
                                            self.screen_height * self.coordinate_scale))
 
         self.car_image = [pg.transform.rotate(pg.transform.scale(pg.image.load(self.asset_location + self.car_par[i]['sprite']),
-                                               (img_width, img_height)), - self.car_par[i]['orientation']) for i in range(len(self.car_par))]
+                                               (img_width, img_height)), -self.car_par[i]['orientation']) for i in range(len(self.car_par))]
 
         self.coor_image = pg.image.load(self.asset_location + self.coordinate)
 
@@ -82,7 +84,7 @@ class VisUtils:
         "Draw Axis Lines"
 
         self.screen.fill((255, 255, 255))
-        self.draw_axes() # calling draw axis function
+        self.draw_axes()  # calling draw axis function
         pg.display.flip()
         pg.display.update()
 
@@ -108,11 +110,11 @@ class VisUtils:
         self.draw_axes()
         self.draw_dashed_line1()
         self.draw_dashed_line2()
+
+        img_width = int(self.car_width * self.coordinate_scale * self.zoom)
+        img_height = int(self.car_length * self.coordinate_scale * self.zoom)
+
         for k in range(steps - 1):
-            # self.screen.fill((255, 255, 255))
-            # self.draw_axes()
-            # self.draw_dashed_line1()
-            # self.draw_dashed_line2()
             # Draw Images
             n_agents = 2
             for i in range(n_agents):
@@ -128,20 +130,30 @@ class VisUtils:
 
                 if i == 0:
                     pos = (pos_x, pos_y)  # car position
+
+                    orientation = -math.atan((pos_x_new - pos_x_old)/(pos_y_new - pos_y_old)) * 180 / math.pi
                 if i == 1:
                     # for uncontrolled intersection case, set pos = (pos, self.road_length)
                     # for unprotected left turn, set pos = (self.road_length + self.car_width, 70 - pos)
                     # pos = (self.road_length + self.car_width, 70 - pos)  # car position
 
                     pos = (pos_x, pos_y)  # car position
+                    orientation = -90 + math.atan((pos_y_new - pos_y_old)/(pos_x_new - pos_x_old)) * 180 / math.pi
+
                 '''transform pos'''
                 pixel_pos_car = self.c2p(pos)
-                size_car = self.car_image[i].get_size()
+
+                car_image = pg.transform.rotate(pg.transform.scale(pg.image.load(self.asset_location + self.car_par[i]['sprite']),
+                                       (img_width, img_height)), -orientation)
+
+                size_car = car_image.get_size()
+                # size_car = self.car_image[i].get_size()
 
                 # try with opacity
-                self.blit_alpha(self.screen, self.car_image[i].convert_alpha(), (pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2), 11*k)
-                # self.screen.blit(self.car_image[i].convert_alpha(),
-                #                  (pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2))
+                self.blit_alpha(self.screen, car_image.convert_alpha(), (pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2), 11 * k)
+
+                # self.blit_alpha(self.screen, self.car_image[i].convert_alpha(), (pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2), 11*k)
+                # self.screen.blit(self.car_image[i].convert_alpha(),(pixel_pos_car[0] - size_car[0] / 2, pixel_pos_car[1] - size_car[1] / 2))
                 time.sleep(0.05)
                 # if self.sim.decision_type == "baseline":
                 #     time.sleep(0.05)
@@ -202,57 +214,19 @@ class VisUtils:
 
     def draw_axes(self):
         # draw lanes based on environment
-        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((35 + self.car_width, -50)),
-                     self.c2p((35 + self.car_width, 100)), self.car_image[0].get_size()[0] * 4)
-
-
-        # pg.draw.line(self.screen, LIGHT_GREY, self.c2p((35 + self.car_width / 2, -50)),
-        #              self.c2p((35 + self.car_width / 2, 100)), self.car_image[0].get_size()[0] * 2)
+        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((35, -50)),
+                     self.c2p((35, 100)), self.car_image[0].get_size()[0] * 4)
 
         # for uncontrolled intersection case, set self.car_image[1].get_size()[1]
         # for unprotected left turn, set self.car_image[1].get_size()[0]
 
-        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((100, 35 - self.car_width)),
-                     self.c2p((-50, 35 - self.car_width)), self.car_image[1].get_size()[1] * 4)
+        pg.draw.line(self.screen, LIGHT_GREY, self.c2p((100, 35)),
+                     self.c2p((-50, 35)), self.car_image[1].get_size()[1] * 4)
 
-
-        # pg.draw.line(self.screen, LIGHT_GREY, self.c2p((100, 35 - self.car_width / 2)),
-        #              self.c2p((-50, 35 - self.car_width / 2)), self.car_image[1].get_size()[1] * 2)
-
-        # pg.draw.line(self.screen, (0, 0, 0), self.c2p((35 + self.car_width / 2, -50)),
-        #              self.c2p((35 + self.car_width / 2, 100)), 1)
-        # pg.draw.line(self.screen, (0, 0, 0), self.c2p((100, 35 - self.car_width / 2)),
-        #              self.c2p((-50, 35 - self.car_width / 2)), 1)
-        # bound1 = [[-1, 1], None] #[xbound, ybound], xbound = [x_min, x_max]  what is the meaning of bound?
-        # bound2 = [None, [-1, 1]]
-        # bound_set = [[[-12.5, 12.5], None], [None, [-1, 1]]]
-        # for a in bound_set:
-        #     bound_x, bound_y = a[0], a[1] #vehicle width
-        #     if bound_x:
-        #         b_min, b_max = bound_x[0], bound_x[1]
-        #         _bound1 = self.c2p((b_min, 25))
-        #         _bound2 = self.c2p((b_max, 25))
-        #         bounds = np.array([_bound1[0], _bound2[0]])
-        #         pg.draw.line(self.screen, LIGHT_GREY, ((bounds[1] + bounds[0])/2, -50),
-        #                      ((bounds[1] + bounds[0])/2, self.screen_height * self.coordinate_scale,
-        #                       ), bounds[1] - bounds[0])
-        #
-        #     if bound_y:
-        #         b_min, b_max = bound_y[0], bound_y[1]
-        #         _bound1 = self.c2p((25, b_min))
-        #         _bound2 = self.c2p((25, b_max))
-        #         bounds = np.array([_bound1[1], _bound2[1]])
-        #         # pg.draw.line(self.screen, LIGHT_GREY, (0, (self.screen_width * self.coordinate_scale,
-        #         #                 (bounds[1] + bounds[0]) / 2),
-        #         #                 (bounds[1] + bounds[0]) / 2), bounds[0] - bounds[1])
-        #
-        #         pg.draw.line(self.screen, LIGHT_GREY, (self.screen_width * self.coordinate_scale,
-        #                         (bounds[1] + bounds[0]) / 2), (-50, (bounds[1] + bounds[0]) / 2),
-        #                         bounds[0] - bounds[1])
 
     def draw_dashed_line1(self):
-        origin = self.c2p((35 + self.car_width, -50))
-        target = self.c2p((35 + self.car_width, 100))
+        origin = self.c2p((35, -50))
+        target = self.c2p((35, 100))
         displacement = target - origin
         length = abs(displacement[1])
         slope = displacement / length
@@ -264,8 +238,8 @@ class VisUtils:
             pg.draw.line(self.screen, (0, 0, 0), start, end, 1)
 
     def draw_dashed_line2(self):
-        origin = self.c2p((100, 35 - self.car_width))
-        target = self.c2p((-50, 35 - self.car_width))
+        origin = self.c2p((100, 35))
+        target = self.c2p((-50, 35))
         displacement = target - origin
         length = abs(displacement[0])
         slope = displacement / length
