@@ -12,7 +12,7 @@ class config_NN (config_prototype):
                                         self.N_layers,
                                         self.N_neurons)
 
-        self.random_seeds = {'train': 7, 'generate': 18}
+        self.random_seeds = {'train': 7, 'generate': 1000}
 
         self.ODE_solver = 'RK23'
         # Accuracy level of BVP data
@@ -137,8 +137,8 @@ class setup_problem(problem_prototype):
         A = X_aug[5 * self.N_states:6 * self.N_states]
         Omega2 = np.matmul(self.B1.T, A) / 2
 
-        max_acc = 1
-        min_acc = -1
+        max_acc = 0.1
+        min_acc = -0.1
         Omega1[np.where(Omega1 > max_acc)] = max_acc
         Omega1[np.where(Omega1 < min_acc)] = min_acc
         Omega2[np.where(Omega2 > max_acc)] = max_acc
@@ -161,7 +161,7 @@ class setup_problem(problem_prototype):
 
             # Boundary setting for lambda(T) when it is the final time T
             dFdXT = np.concatenate((np.array([self.alpha]),
-                                    np.array([0]),
+                                    np.array([-2 * (XT[1] - 35)]),
                                     np.array([0]),
                                     np.array([-2 * (XT[3] - 18)]),
                                     np.array([0]),
@@ -173,12 +173,31 @@ class setup_problem(problem_prototype):
                                     np.array([0]),
                                     np.array([0]),
                                     np.array([self.alpha]),
-                                    np.array([0]),
+                                    np.array([-2 * (XT[5] - 35)]),
                                     np.array([0]),
                                     np.array([-2 * (XT[7] - 18)])))
 
+            # dFdXT = np.concatenate((np.array([self.alpha]),
+            #                         np.array([0]),
+            #                         np.array([-2 * (XT[2] - 0)]),
+            #                         np.array([-2 * (XT[3] - 18)]),
+            #                         np.array([0]),
+            #                         np.array([0]),
+            #                         np.array([0]),
+            #                         np.array([0]),
+            #                         np.array([0]),
+            #                         np.array([0]),
+            #                         np.array([0]),
+            #                         np.array([0]),
+            #                         np.array([self.alpha]),
+            #                         np.array([0]),
+            #                         np.array([-2 * (XT[6] - 0)]),
+            #                         np.array([-2 * (XT[7] - 18)])))
+
             # Terminal cost in the value function, see the new version of HJI equation
-            F = -np.array((self.alpha * XT[0] - (XT[3] - 18)**2, self.alpha * XT[4] - (XT[7] - 18)**2))
+            F = -np.array((self.alpha * XT[0] - (XT[3] - 18) ** 2 - (XT[1] - 35) ** 2, self.alpha * XT[4] - (XT[7] - 18) ** 2 - (XT[5] - 35) ** 2))
+            # F = -np.array((self.alpha * XT[0] - (XT[3] - 18) ** 2 - (XT[2] - 0) ** 2, self.alpha * XT[4] - (XT[7] - 18) ** 2 - (XT[6] - 0) ** 2))
+            # F = -np.array((self.alpha * XT[0] - (XT[3] - 18) ** 2, self.alpha * XT[4] - (XT[7] - 18) ** 2))
 
             return np.concatenate((X0 - X0_in, AT - dFdXT, VT - F))
         return bc
