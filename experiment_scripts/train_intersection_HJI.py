@@ -29,7 +29,7 @@ p.add_argument('--batch_size', type=int, default=32)
 p.add_argument('--lr', type=float, default=2e-5, help='learning rate. default=2e-5')
 
 # 200000 for hybrid, 100000 for supervised, 160000 for self-supervised
-p.add_argument('--num_epochs', type=int, default=2000,
+p.add_argument('--num_epochs', type=int, default=10000,
                help='Number of epochs to train for.')
 
 p.add_argument('--epochs_til_ckpt', type=int, default=1000,
@@ -47,9 +47,9 @@ p.add_argument('--num_nl', type=int, default=64, required=False, help='Number of
 p.add_argument('--pretrain_iters', type=int, default=1000, required=False, help='Number of pretrain iterations')
 p.add_argument('--counter_start', type=int, default=-1, required=False,
                help='Defines the initial time for the curriculul training')
-p.add_argument('--counter_end', type=int, default=1000, required=False,
+p.add_argument('--counter_end', type=int, default=9000, required=False,
                help='Defines the linear step for curriculum training starting from the initial time')
-p.add_argument('--num_src_samples', type=int, default=100, required=False,
+p.add_argument('--num_src_samples', type=int, default=10000, required=False,
                help='Number of source samples at each time step')
 
 p.add_argument('--collisionR', type=float, default=0.25, required=False, help='Collision radius between vehicles')
@@ -78,7 +78,7 @@ if opt.counter_end == -1:
 '''
 Using HJI to train the value network
 '''
-dataset = dataio.IntersectionHJI_SelfSupervised(numpoints=1000,
+dataset = dataio.IntersectionHJI_SelfSupervised(numpoints=61000,
                                                 pretrain=opt.pretrain, tMin=opt.tMin,
                                                 tMax=opt.tMax, counter_start=opt.counter_start,
                                                 counter_end=opt.counter_end,
@@ -100,7 +100,8 @@ loss definition for HJI
 
 # for loop over the training iterations for each gamma
 
-gamma = np.linspace(0.00000001, 5, 9)
+# gamma = np.linspace(0.001, 5, 50)
+gamma = np.logspace(0.001, 5, 10, base=10)/20000
 # epoch_each = (opt.counter_end / len(gamma)) + opt.pretrain_iters
 
 for i in range(len(gamma)):
@@ -108,10 +109,10 @@ for i in range(len(gamma)):
         load_dir = None
         start_epoch = 0
     else:
-        load_dir = os.path.join(opt.logging_root, f'experiment_grow_gamma_tanh_try_gamma_{gamma[i - 1]}/')
+        load_dir = os.path.join(opt.logging_root, f'logspace-small/experiment_grow_gamma_tanh_try_gamma_{gamma[i - 1]}/')
         start_epoch = opt.num_epochs-1
 
-    root_path = os.path.join(opt.logging_root, f'experiment_grow_gamma_tanh_try_gamma_{gamma[i]}/')
+    root_path = os.path.join(opt.logging_root, f'logspace-small/experiment_grow_gamma_tanh_try_gamma_{gamma[i]}/')
 
     loss_fn = loss_functions.initialize_intersection_HJI_selfsupervised(dataset, gamma[i])
 
